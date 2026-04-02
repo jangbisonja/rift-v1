@@ -84,7 +84,7 @@ Send as: `Authorization: Bearer <access_token>`
 |---|---|---|---|
 | POST | `/auth/login` | public | Get JWT token |
 | GET | `/users/me` | user | Current user profile |
-| GET | `/posts` | public | List posts (`?type=`, `?status=`, `?slug=`, paginated) |
+| GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`) → `Post[]` |
 | GET | `/posts/{id}` | public | Single post |
 | POST | `/posts` | superuser | Create post |
 | PUT | `/posts/{id}` | superuser | Full update |
@@ -95,7 +95,7 @@ Send as: `Authorization: Bearer <access_token>`
 | GET | `/tags` | public | List tags |
 | POST | `/tags` | superuser | Create tag |
 | DELETE | `/tags/{id}` | superuser | Delete tag |
-| GET | `/media` | superuser | List media (paginated) |
+| GET | `/media` | superuser | List media (`?limit=`, `?offset=`) → `Media[]` |
 | POST | `/media/upload` | superuser | Upload image (→ WebP) |
 | POST | `/media/{id}/attach/{post_id}` | superuser | Link media to post |
 | DELETE | `/media/{id}` | superuser | Delete media |
