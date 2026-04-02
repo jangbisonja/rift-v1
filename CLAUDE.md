@@ -8,20 +8,46 @@ Headless CMS. Admin-only writes; public reads. Projected scale: ~100 concurrent 
 
 ```
 rift-v1/
-├── backend/             # FastAPI API — see backend/CLAUDE.md for implementation detail
+├── backend/             # FastAPI API — see backend/CLAUDE.md
+├── frontend/            # TBD — see frontend/CLAUDE.md when it exists
 └── .github/workflows/ci.yml
 ```
 
-## Local Dev
+## Role by Context
 
-1. Copy `backend/.env.example` → `backend/.env` and fill in values
-2. Ensure a PostgreSQL database is running and accessible
-3. `cd backend && alembic upgrade head`
-4. `cd backend && uvicorn src.main:app --reload`
+**Started from `rift-v1/` (root):**
+Act as project manager and senior architect. Do not write code.
+Responsibilities: understand requirements, identify which layer(s) are affected,
+write clear task descriptions for the backend and/or frontend chat to execute.
+Output: task breakdowns, design decisions, API contract changes, questions to resolve.
+
+**Started from `rift-v1/backend/`:**
+Act as senior Python/FastAPI developer. See `backend/CLAUDE.md` for full instructions.
+
+**Started from `rift-v1/frontend/`:**
+Act as senior frontend developer. See `frontend/CLAUDE.md` for full instructions.
+
+## Self-Documentation Policy
+
+Whenever a non-obvious decision is made — a workaround, a library quirk, an
+architectural choice, or a discovered constraint — document it immediately in the
+relevant CLAUDE.md under a **Known Solutions** or **Design Decisions** section.
+
+The test: *would the next conversation know to do this, or would it repeat the mistake?*
+If no, write it down.
+
+What to record:
+- Why a specific approach was chosen over the obvious one
+- Library version quirks or gotchas discovered during development
+- Constraints imposed by the stack or environment
+- Decisions that look wrong but are intentional
 
 ## API Contract
 
-Base URL (local): `http://localhost:8000`  
+This is the shared contract between backend and frontend. Both sides must treat this
+as the source of truth. If the backend changes an endpoint, this file is updated first.
+
+Base URL (local): `http://localhost:8000`
 OpenAPI schema: `GET /openapi.json` — available only in `local` and `staging` environments
 
 ### Authentication
@@ -44,7 +70,7 @@ Send as: `Authorization: Bearer <access_token>`
 
 **Enums**
 - `PostType`: `NEWS` | `ARTICLE` | `PROMO` | `EVENT`
-- `PostStatus`: `DRAFT` | `PUBLISHED`
+- `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
@@ -62,7 +88,9 @@ Send as: `Authorization: Bearer <access_token>`
 | GET | `/posts/{id}` | public | Single post |
 | POST | `/posts` | superuser | Create post |
 | PUT | `/posts/{id}` | superuser | Full update |
-| PATCH | `/posts/{id}/publish` | superuser | Publish |
+| PATCH | `/posts/{id}/publish` | superuser | Publish (sets `published_at`) |
+| PATCH | `/posts/{id}/unpublish` | superuser | Revert to DRAFT |
+| PATCH | `/posts/{id}/archive` | superuser | Move to ARCHIVE |
 | DELETE | `/posts/{id}` | superuser | Delete |
 | GET | `/tags` | public | List tags |
 | POST | `/tags` | superuser | Create tag |
