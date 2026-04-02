@@ -1,0 +1,5 @@
+-r base.txt
+ruff
+pytest
+pytest-asyncio
+httpx

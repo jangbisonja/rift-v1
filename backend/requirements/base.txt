@@ -1,0 +1,12 @@
+fastapi==0.135.2
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+psycopg2-binary
+alembic
+pydantic-settings
+fastapi-users[sqlalchemy]
+pillow
+python-multipart
+python-slugify
+loguru

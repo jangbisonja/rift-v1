@@ -1,0 +1,46 @@
+# ============================================
+# Python & Backend (FastAPI)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+.env
+.env.*
+!.env.example
+api.log
+
+# Alembic
+alembic/versions/*.pyc
+
+# ============================================
+# Media Storage (Ignoring actual uploads, NOT code)
+# ============================================
+# We ignore the directory where images are SAVED on disk
+uploads/
+
+# ============================================
+# Frontend (Next.js) - Prepared for future
+# ============================================
+node_modules/
+.next/
+out/
+build/
+dist/
+.DS_Store
+*.local
+
+# ============================================
+# IDE & System
+# ============================================
+.vscode/
+.idea/
+.history/
+*.swp
+*.bak
+Thumbs.db
+ehthumbs.db
+Desktop.ini
