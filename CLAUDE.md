@@ -72,11 +72,20 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostType`: `NEWS` | `ARTICLE` | `PROMO` | `EVENT`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
+**Two post response shapes:**
+- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, created_at, published_at, tags[], media[]`. No `content`, no `post_metadata`.
+- `PostRead` — returned by `GET /posts/{id}`: all of the above plus `content`, `post_metadata`, `updated_at`.
+
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
 **Post `post_metadata`** — arbitrary JSON; SEO fields + type-specific data (e.g. `promo_code` for `PROMO`)
 
-**Media `path`** — relative path: `uploads/YYYY/MM/DD/{uuid}.webp` — always WebP
+**Media `path`** — relative path: `uploads/YYYY/MM/DD/{uuid}.webp` — always WebP.
+Served as static files at `GET /uploads/...` (no auth required).
+Full URL: `{BASE_URL}/{media.path}`
+
+**Media in posts** — `MediaRead` shape (inside `PostListItem`/`PostRead`): `id, path, original_name` only.
+The standalone `GET /media` endpoint returns a fuller shape that also includes `post_id, created_at`.
 
 ### Endpoint Summary
 
@@ -84,8 +93,8 @@ Send as: `Authorization: Bearer <access_token>`
 |---|---|---|---|
 | POST | `/auth/login` | public | Get JWT token |
 | GET | `/users/me` | user | Current user profile |
-| GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`) → `Post[]` |
-| GET | `/posts/{id}` | public | Single post |
+| GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`) → `PostListItem[]` |
+| GET | `/posts/{id}` | public | Single post → `PostRead` (includes content) |
 | POST | `/posts` | superuser | Create post |
 | PUT | `/posts/{id}` | superuser | Full update |
 | PATCH | `/posts/{id}/publish` | superuser | Publish (sets `published_at`) |

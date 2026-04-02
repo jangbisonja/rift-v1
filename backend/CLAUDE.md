@@ -53,6 +53,10 @@ Each module: `router.py`, `schemas.py`, `models.py`, `service.py`,
 `title`, `slug` (unique), `content` (JSON/TipTap), `post_metadata` (JSON/SEO),
 `created_at`, `updated_at`, `published_at`. M2M → `tags` via `post_tag`. O2M → `media`.
 
+Two response schemas:
+- `PostList` — list endpoint shape: excludes `content`, `post_metadata`, `updated_at`. Includes `media[]`.
+- `PostRead` — detail endpoint shape: full post including all fields and `media[]`.
+
 **PostType**: `NEWS`, `ARTICLE`, `PROMO`, `EVENT`
 **PostStatus**: `DRAFT`, `PUBLISHED`, `ARCHIVE`
 

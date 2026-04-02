@@ -2,14 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8000",
-        pathname: "/uploads/**",
-      },
-    ],
+    // Backend already converts all uploads to WebP — no need for Next.js re-optimization.
+    // Also avoids the "resolved to private ip" error when fetching from localhost in dev.
+    unoptimized: true,
   },
 };
 
