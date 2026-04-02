@@ -1,25 +1,26 @@
 import { listPosts } from "@/lib/api/client";
-import { PostCard } from "@/components/post-card";
+import { postHref } from "@/lib/post-href";
+import { PostRowItem } from "@/components/post-row-item";
 
 export const revalidate = 60;
 
 export default async function ArticlesPage() {
-  let items: import("@/lib/schemas").Post[] = [];
+  let posts: import("@/lib/schemas").PostListItem[] = [];
   try {
-    items = await listPosts({ post_type: "ARTICLE", post_status: "PUBLISHED", limit: 12 });
+    posts = await listPosts({ post_type: "ARTICLE", post_status: "PUBLISHED" });
   } catch {
-    /* serve empty state on error */
+    /* empty */
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="mb-8 text-3xl font-bold">Articles</h1>
-      {items.length === 0 ? (
+      {posts.length === 0 ? (
         <p className="text-muted-foreground">No published articles yet.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((post) => (
-            <PostCard key={post.id} post={post} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {posts.map((p) => (
+            <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
           ))}
         </div>
       )}

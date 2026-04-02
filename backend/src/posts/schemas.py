@@ -59,3 +59,4 @@ class PostList(BaseModel):
     created_at: datetime
     published_at: datetime | None
     tags: list[TagRead]
+    media: list[MediaRead]

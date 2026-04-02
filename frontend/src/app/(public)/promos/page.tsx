@@ -1,25 +1,25 @@
 import { listPosts } from "@/lib/api/client";
-import { PostCard } from "@/components/post-card";
+import { PromoItem } from "@/components/promo-item";
 
 export const revalidate = 60;
 
 export default async function PromosPage() {
-  let items: import("@/lib/schemas").Post[] = [];
+  let posts: import("@/lib/schemas").PostListItem[] = [];
   try {
-    items = await listPosts({ post_type: "PROMO", post_status: "PUBLISHED", limit: 12 });
+    posts = await listPosts({ post_type: "PROMO", post_status: "PUBLISHED" });
   } catch {
-    /* serve empty state on error */
+    /* empty */
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="mb-8 text-3xl font-bold">Promotions</h1>
-      {items.length === 0 ? (
+      {posts.length === 0 ? (
         <p className="text-muted-foreground">No active promotions.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((post) => (
-            <PostCard key={post.id} post={post} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {posts.map((p) => (
+            <PromoItem key={p.id} post={p} />
           ))}
         </div>
       )}

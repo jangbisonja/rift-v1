@@ -12,7 +12,7 @@
  * Pagination is limit/offset, not page/size.
  */
 
-import type { Post, PostCreate, PostUpdate, Tag, TagCreate, Media } from "@/lib/schemas";
+import type { Post, PostListItem, PostCreate, PostUpdate, Tag, TagCreate, Media } from "@/lib/schemas";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -99,7 +99,7 @@ export interface ListPostsParams {
 export async function listPosts(
   params: ListPostsParams = {},
   options: RequestOptions = {},
-): Promise<Post[]> {
+): Promise<PostListItem[]> {
   const qs = new URLSearchParams();
   if (params.post_type) qs.set("post_type", params.post_type);
   if (params.post_status) qs.set("post_status", params.post_status);
@@ -107,7 +107,7 @@ export async function listPosts(
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
   const query = qs.toString() ? `?${qs}` : "";
-  return request<Post[]>(`/posts${query}`, {}, options);
+  return request<PostListItem[]>(`/posts${query}`, {}, options);
 }
 
 export async function getPost(id: string, options: RequestOptions = {}): Promise<Post> {
