@@ -12,7 +12,7 @@ class Config(BaseSettings):
 
     ENVIRONMENT: str = "local"
 
-    ADMIN_EMAIL: str = "admin@rift.local"
+    ADMIN_EMAIL: str = "admin@rift.dev"
     ADMIN_PASSWORD: str = "admin123"
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]

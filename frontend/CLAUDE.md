@@ -6,7 +6,7 @@ Senior TypeScript/Next.js developer. Write production-quality, type-safe code.
 Follow conventions exactly — do not invent patterns.
 
 **Before writing code, read:**
-- `../CLAUDE.md` — project overview, API contract, endpoint reference
+- `../API_CONTRACT.md` — shared API contract (data shapes, endpoints, auth flow)
 
 ## Stack
 
@@ -44,13 +44,20 @@ frontend/
 │   │   ├── editor/rich-editor.tsx       # TipTap wrapper (always "use client")
 │   │   ├── nav.tsx                      # sticky header — logo + section links + theme toggle
 │   │   ├── cover-image.tsx              # next/image wrapper with muted placeholder fallback
-│   │   ├── post-hero.tsx                # large featured post card (16:9 cover + title)
+│   │   ├── post-hero.tsx                # large featured post card (3:1 cover + title)
 │   │   ├── post-row-item.tsx            # horizontal card — cover left, title right
 │   │   ├── post-detail.tsx              # full post layout — cover + metadata + rich text
 │   │   ├── promo-item.tsx               # compact promo card for right-column list
-│   │   ├── rich-text-content.tsx        # server-side TipTap JSON → HTML (generateHTML)
+│   │   ├── rich-text-content.tsx        # server-side TipTap JSON → HTML (custom DOM-free recursive renderer — generateHTML requires DOM)
 │   │   ├── theme-toggle.tsx             # Sun/Moon button ("use client")
-│   │   └── providers.tsx               # next-themes ThemeProvider ("use client")
+│   │   ├── providers.tsx               # next-themes ThemeProvider ("use client")
+│   │   └── mod/
+│   │       ├── sidebar.tsx             # admin nav sidebar
+│   │       ├── post-form.tsx           # shared create/edit form (title, type, tags, cover, content, metadata)
+│   │       ├── token-context.tsx       # React context providing JWT token to client components
+│   │       ├── media-picker-modal.tsx  # gallery picker modal for TipTap editor
+│   │       ├── breadcrumbs.tsx         # breadcrumb nav for admin pages
+│   │       └── confirm-dialog.tsx      # reusable confirmation dialog
 │   ├── lib/
 │   │   ├── api/
 │   │   │   ├── client.ts               # typed fetch wrapper for all backend endpoints
@@ -95,27 +102,20 @@ Flow:
 
 - `listPosts()` returns `PostListItem[]` — list shape (no `content`, no `post_metadata`)
 - `getPost(id)` returns `Post` — full shape (includes `content`, `post_metadata`)
-- See `../CLAUDE.md` for endpoint reference and query param names
+- See `../API_CONTRACT.md` for endpoint reference and query param names
 
 ## Schemas
 
-Two distinct types for posts — match the two backend response shapes:
-
-| Type | Source | Has content? | Has media? |
-|---|---|---|---|
-| `PostListItem` | `GET /posts` | No | Yes (`MediaRead[]`) |
-| `Post` | `GET /posts/{id}` | Yes | Yes (`MediaRead[]`) |
-
-`MediaRead` (inside posts) has: `id`, `path`, `original_name`.
-`Media` (from `GET /media`) additionally has: `post_id`, `created_at`.
+Zod schemas in `src/lib/schemas/index.ts` mirror the backend response shapes defined
+in `../API_CONTRACT.md`. Keep them in sync — do not redefine data shapes here.
 
 ## Media / Cover Images
 
-Cover image URL: `mediaUrl(post.media[0].path)` from `src/lib/media.ts`.
+Cover image: `post.cover_media` (`MediaRead | null`). Use `CoverImage` component which
+accepts `cover: MediaRead | null`, handles fill vs fixed size, and shows a muted placeholder
+when null. URL: `mediaUrl(cover.path)` from `src/lib/media.ts`.
 Backend serves uploads at `GET /uploads/...` (static files, no auth required).
 `next/image` remote pattern configured in `next.config.ts` for `localhost:8000/uploads/**`.
-Use `CoverImage` component — handles the `fill` vs fixed size cases and shows a muted
-placeholder div when `media[]` is empty.
 
 ## TipTap Setup
 
@@ -260,11 +260,6 @@ Upload/attach logic lives in the page, not the editor. Body images: upload only,
 Gallery images: upload + attach via `POST /media/{id}/attach/{post_id}` — available in picker.
 `MediaPickerModal` (`src/components/mod/media-picker-modal.tsx`) shows the gallery grid.
 If `mediaLibrary` prop is absent, the editor hides the picker button.
-
-**`PostListItem` vs `Post` — two different backend response shapes**
-`GET /posts` returns `PostListItem[]` (no `content`/`post_metadata`/`updated_at`).
-`GET /posts/{id}` returns `Post` (full). Detail pages must call `getPost(id)` after the
-list lookup to get the content for rendering.
 
 ## TODO.md
 

@@ -130,68 +130,12 @@ If a user uploads via the editor on the create page and then discards the post, 
 
 ---
 
-## Cover Image Architecture — Open Issue
+## Cover Image
 
-### Problem Statement
-
-The current system has no explicit cover image concept at the data layer. Cover images
-are determined by a frontend convention: `post.media[0]` = cover. This is fragile and
-causes a role collision: body images attached via the TipTap editor appear in `media[]`
-and can become the "cover" if they are the first item.
-
-### Root Cause
-
-The backend `Media` model has no role field. All items in `post.media[]` are equal.
-The `media[0]` convention is a positional assumption, not a semantic one.
-
-The conflation is triggered when: user uploads inline image via editor → `attachMedia()`
-is called → image joins `post.media[]` → `media[0]` picks it as cover on public pages.
-
-### Recommended Solution (Pending Backend Work)
-
-**Add `cover_media_id: UUID | null` as an explicit FK on the `Post` model.**
-
-```sql
-ALTER TABLE post ADD COLUMN cover_media_id UUID REFERENCES media(id) ON DELETE SET NULL;
-```
-
-This separates the concern explicitly at the database level:
-- `post.cover_media_id` → the designated cover (nullable, FK-enforced, auto-cleared on delete)
-- `post.media[]` → all attached files (gallery, body images, downloads)
-
-**Body images should NOT be attached to `post.media[]`** via `attachMedia`. They are
-embedded as absolute URLs in the TipTap JSON content — they live at their URL and do not
-need to be tracked in the media attachment table. Only cover images and explicitly
-attached gallery assets should be in `post.media[]`.
-
-### API Contract Changes Required (Backend-First)
-
-| Change | Description |
-|---|---|
-| Migration | Add `cover_media_id` column to `post` table |
-| `PostRead` / `PostList` | Expose `cover_media: MediaRead \| null` in responses |
-| `POST /posts`, `PUT /posts/{id}` | Accept `cover_media_id: str \| null` in request body |
-
-### Frontend Changes (After Backend Ships)
-
-| Area | Change |
-|---|---|
-| `src/lib/schemas/index.ts` | Add `cover_media: MediaReadSchema.nullable()` to `PostSchema` + `PostListItemSchema`; add `cover_media_id` to `PostCreateSchema` |
-| `src/components/cover-image.tsx` | Accept `coverMedia: MediaRead \| null` instead of `media: MediaRead[]` |
-| `src/components/post-detail.tsx`, `post-hero.tsx`, `post-row-item.tsx` | Pass `post.cover_media` instead of `post.media` |
-| `src/app/mod/posts/[id]/page.tsx` | Add dedicated "Cover Image" section with upload + remove controls |
-| Editor upload path | Remove `attachMedia` call from `onEditorImageUpload` on edit page |
-
-### Interim State (Current)
-
-Until the backend adds `cover_media_id`:
-- `media[0]` convention remains in place
-- Body images uploaded via the editor on the edit page ARE attached to `post.media[]`
-  and CAN become the cover — this is a known limitation
-- Workaround: upload cover image first so it becomes `media[0]`; upload body images after
-
-Do not patch this with `post_metadata.cover_media_id` — that approach has no FK integrity
-and creates a soft dependency that is harder to migrate later.
+Posts have a dedicated `cover_media: MediaRead | null` field (set via `cover_media_id` in
+create/update requests). The frontend uses `post.cover_media` directly — there is no
+`media[0]` convention. Cover is managed atomically in `PostForm` via a hidden
+`cover_media_id` field.
 
 ---
 

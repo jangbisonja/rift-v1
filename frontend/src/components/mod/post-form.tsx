@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useForm, Controller, type Resolver, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PostCreateSchema, type PostCreate, type MediaRead } from "@/lib/schemas";
+import { PostCreateSchema, PostType, type PostCreate, type MediaRead } from "@/lib/schemas";
 import { RichEditor } from "@/components/editor/rich-editor";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -106,10 +106,11 @@ export function PostForm({
           {...register("type")}
           className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <option value="NEWS">News</option>
-          <option value="ARTICLE">Article</option>
-          <option value="PROMO">Promo</option>
-          <option value="EVENT">Event</option>
+          {PostType.options.map((value) => (
+            <option key={value} value={value}>
+              {value.charAt(0) + value.slice(1).toLowerCase()}
+            </option>
+          ))}
         </select>
       </div>
 

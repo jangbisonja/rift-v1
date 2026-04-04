@@ -41,7 +41,7 @@ Single shared `async_sessionmaker` → per-request sessions via `get_db()` depen
 
 ```
 user        UUID PK  fastapi-users managed; superuser flag for admin
-post        UUID PK  type + status enums; JSON content + metadata; timestamps
+post        UUID PK  type + status enums; JSON content + metadata; timestamps; nullable FK cover_media_id → media.id (SET NULL on delete)
 tag         UUID PK  unique name + unique slug
 post_tag             M2M join (post ↔ tag); CASCADE both sides
 media       UUID PK  nullable FK to post; SET NULL on post delete
@@ -52,6 +52,7 @@ media       UUID PK  nullable FK to post; SET NULL on post delete
 ```
 Post ──< post_tag >── Tag    many-to-many via association table
 Post ──<  Media              one-to-many; media.post_id nullable
+Post ──◇  Media              cover_media_id; nullable FK, SET NULL on delete
 ```
 
 All constraint names are explicit via `POSTGRES_INDEXES_NAMING_CONVENTION` on `Base.metadata` — prevents anonymous constraints that break migrations.

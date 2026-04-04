@@ -11,7 +11,6 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Endpoints**:
 - `POST /auth/login` — email/password → JWT token (public)
-- `POST /auth/logout` — invalidate token (authenticated)
 - `GET /users/me` — current user profile (authenticated)
 - `PATCH /users/me` — update own profile (authenticated)
 
@@ -24,6 +23,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 **Design decisions**:
 - **fastapi-users over custom auth**: battle-tested password hashing, token lifecycle, schema scaffolding — saves ~200 lines of boilerplate
 - **JWT only (no sessions)**: stateless; fits headless CMS where frontend holds the token
+- **No server-side logout endpoint**: JWT is stateless — there is no token registry to invalidate. Logout is handled client-side by deleting the HTTP-only cookie. A server-side denylist is out of scope for v1; fastapi-users does not provide one either.
 - **Admin seeded in `lifespan`**: system is always operable after a fresh migration without manual SQL
 - **`current_superuser` exported from this module**: auth guard defined once, imported everywhere via `from src.auth.router import current_superuser`
 
