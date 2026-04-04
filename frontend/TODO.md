@@ -6,7 +6,7 @@ _(nothing in progress)_
 
 ## Up Next
 
-- [ ] **Admin panel** — `/mod`: posts CRUD, tags, media (Client Components + TanStack Query)
+_(nothing queued)_
 
 ## Done
 
@@ -18,3 +18,4 @@ _(nothing in progress)_
 - [x] **Auth flow** — login/logout Route Handlers, HTTP-only cookie, `proxy.ts` guards `/mod/*`. ✓
 - [x] **TipTap editor** — `src/components/editor/rich-editor.tsx` — StarterKit + Image only. ✓
 - [x] **Public pages MVP** — Homepage (News+Promos | Events | Articles), listing + detail pages for all 4 types. Cover images via `CoverImage` component + `mediaUrl()`. ✓
+- [x] **Admin panel** — `/mod`: login, posts list+create+edit, tags, media. Token passed server→client via React Context. TanStack Query for all data/mutations. ✓
