@@ -12,9 +12,11 @@ import {
   deleteMedia,
 } from "@/lib/api/client";
 import { useToken } from "@/components/mod/token-context";
+import { useToast } from "@/components/toast-provider";
 import { PostForm } from "@/components/mod/post-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/mod/confirm-dialog";
+import { Breadcrumbs } from "@/components/mod/breadcrumbs";
 import { useParams } from "next/navigation";
 import type { PostCreate } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
   const token = useToken();
   const qc = useQueryClient();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmMediaId, setConfirmMediaId] = useState<string | null>(null);
 
@@ -44,7 +47,9 @@ export default function EditPostPage() {
     onSuccess: (updated) => {
       qc.setQueryData(["post", id], updated);
       qc.invalidateQueries({ queryKey: ["posts"] });
+      toast("Saved.", "success");
     },
+    onError: () => toast("Failed to save. Please try again.", "error"),
   });
 
   const publishMut = useMutation({
@@ -115,6 +120,7 @@ export default function EditPostPage() {
     <>
     <div className="space-y-8 max-w-3xl">
       <div className="space-y-1">
+      <Breadcrumbs items={[{ label: "Posts", href: "/mod/posts" }, { label: post.title }]} />
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold">Edit post</h1>
         <Badge variant="outline">{post.status}</Badge>
@@ -152,13 +158,6 @@ export default function EditPostPage() {
       </div>
       <p className="text-xs text-muted-foreground font-mono">{post.slug}</p>
       </div>
-
-      {updateMut.isError && (
-        <p className="text-destructive text-sm">Failed to save. Please try again.</p>
-      )}
-      {updateMut.isSuccess && (
-        <p className="text-sm text-muted-foreground">Saved.</p>
-      )}
 
       <PostForm
         key={post.id}

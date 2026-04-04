@@ -3,16 +3,20 @@
 import { useMutation } from "@tanstack/react-query";
 import { createPost } from "@/lib/api/client";
 import { useToken } from "@/components/mod/token-context";
+import { useToast } from "@/components/toast-provider";
 import { PostForm } from "@/components/mod/post-form";
+import { Breadcrumbs } from "@/components/mod/breadcrumbs";
 import { useRouter } from "next/navigation";
 import type { PostCreate } from "@/lib/schemas";
 
 export default function NewPostPage() {
   const token = useToken();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const { mutateAsync, isPending, isError } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationFn: (data: PostCreate) => createPost(data, token),
+    onError: () => toast("Failed to create post. Please try again.", "error"),
   });
 
   async function handleSubmit(data: PostCreate) {
@@ -22,10 +26,8 @@ export default function NewPostPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      <Breadcrumbs items={[{ label: "Posts", href: "/mod/posts" }, { label: "New post" }]} />
       <h1 className="text-2xl font-bold">New post</h1>
-      {isError && (
-        <p className="text-destructive text-sm">Failed to create post. Please try again.</p>
-      )}
       <PostForm onSubmit={handleSubmit} isSubmitting={isPending} submitLabel="Create post" />
     </div>
   );

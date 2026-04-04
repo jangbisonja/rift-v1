@@ -1,15 +1,35 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { CoverImage } from "@/components/cover-image";
 import { RichTextContent } from "@/components/rich-text-content";
 import { Badge } from "@/components/ui/badge";
 import type { Post } from "@/lib/schemas";
+
+const BACK: Record<string, { href: string; label: string }> = {
+  NEWS:    { href: "/news",     label: "News" },
+  ARTICLE: { href: "/articles", label: "Articles" },
+  PROMO:   { href: "/promos",   label: "Promos" },
+  EVENT:   { href: "/events",   label: "Events" },
+};
 
 interface PostDetailProps {
   post: Post;
 }
 
 export function PostDetail({ post }: PostDetailProps) {
+  const back = BACK[post.type];
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-10">
+      {back && (
+        <Link
+          href={back.href}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to {back.label}
+        </Link>
+      )}
       <header className="mb-8 space-y-4">
         {post.media.length > 0 && (
           <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
