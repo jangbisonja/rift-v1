@@ -13,19 +13,22 @@ import {
 } from "@/lib/api/client";
 import { useToken } from "@/components/mod/token-context";
 import { PostForm } from "@/components/mod/post-form";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/mod/confirm-dialog";
 import { useParams } from "next/navigation";
 import type { PostCreate } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { mediaUrl } from "@/lib/media";
 import { Trash2, Upload } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
   const token = useToken();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmMediaId, setConfirmMediaId] = useState<string | null>(null);
 
   const {
     data: post,
@@ -69,7 +72,10 @@ export default function EditPostPage() {
 
   const deleteMediaMut = useMutation({
     mutationFn: (mediaId: string) => deleteMedia(mediaId, token),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["post", id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["post", id] });
+      setConfirmMediaId(null);
+    },
   });
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -78,7 +84,23 @@ export default function EditPostPage() {
     e.target.value = "";
   }
 
-  if (isLoading) return <p className="text-muted-foreground">Loading…</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6 max-w-3xl">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-8 w-32 ml-auto" />
+          </div>
+          <Skeleton className="h-3 w-40" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
   if (isError || !post) return <p className="text-destructive">Post not found.</p>;
 
   const defaultValues: Partial<PostCreate> = {
@@ -90,7 +112,9 @@ export default function EditPostPage() {
   };
 
   return (
+    <>
     <div className="space-y-8 max-w-3xl">
+      <div className="space-y-1">
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold">Edit post</h1>
         <Badge variant="outline">{post.status}</Badge>
@@ -125,6 +149,8 @@ export default function EditPostPage() {
             </Button>
           )}
         </div>
+      </div>
+      <p className="text-xs text-muted-foreground font-mono">{post.slug}</p>
       </div>
 
       {updateMut.isError && (
@@ -195,8 +221,7 @@ export default function EditPostPage() {
                 <Button
                   variant="destructive"
                   size="icon-xs"
-                  onClick={() => deleteMediaMut.mutate(m.id)}
-                  disabled={deleteMediaMut.isPending}
+                  onClick={() => setConfirmMediaId(m.id)}
                   className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 className="size-3" />
@@ -207,5 +232,14 @@ export default function EditPostPage() {
         )}
       </div>
     </div>
+
+    <ConfirmDialog
+      open={confirmMediaId !== null}
+      title="Delete this image?"
+      description="It will be removed from the post and deleted permanently."
+      onConfirm={() => confirmMediaId && deleteMediaMut.mutate(confirmMediaId)}
+      onCancel={() => setConfirmMediaId(null)}
+    />
+    </>
   );
 }

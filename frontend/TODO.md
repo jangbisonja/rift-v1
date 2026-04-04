@@ -6,7 +6,10 @@ _(nothing in progress)_
 
 ## Up Next
 
-_(nothing queued)_
+- [x] **Pagination** — posts list: prev/next with limit/offset, Next disabled when fewer than PAGE_SIZE results. ✓
+- [x] **Admin loading skeletons & error states** — skeleton rows/cards on posts, tags, media, edit page; retry buttons on error. ✓
+- [x] **Confirm dialog** — `ConfirmDialog` component replaces `window.confirm` on all destructive actions. ✓
+- [x] **Slug display on edit page** — read-only mono slug below the title. ✓
 
 ## Done
 
