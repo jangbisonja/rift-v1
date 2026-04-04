@@ -15,6 +15,8 @@ class Config(BaseSettings):
     ADMIN_EMAIL: str = "admin@rift.local"
     ADMIN_PASSWORD: str = "admin123"
 
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+
     @property
     def database_url(self) -> str:
         return (
