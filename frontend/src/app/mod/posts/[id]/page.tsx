@@ -4,6 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getPost,
   updatePost,
+  publishPost,
+  unpublishPost,
+  archivePost,
   uploadMedia,
   attachMedia,
   deleteMedia,
@@ -41,6 +44,21 @@ export default function EditPostPage() {
     },
   });
 
+  const publishMut = useMutation({
+    mutationFn: () => publishPost(id, token),
+    onSuccess: (updated) => qc.setQueryData(["post", id], updated),
+  });
+
+  const unpublishMut = useMutation({
+    mutationFn: () => unpublishPost(id, token),
+    onSuccess: (updated) => qc.setQueryData(["post", id], updated),
+  });
+
+  const archiveMut = useMutation({
+    mutationFn: () => archivePost(id, token),
+    onSuccess: (updated) => qc.setQueryData(["post", id], updated),
+  });
+
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
       const m = await uploadMedia(file, token);
@@ -73,9 +91,40 @@ export default function EditPostPage() {
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold">Edit post</h1>
         <Badge variant="outline">{post.status}</Badge>
+        <div className="flex gap-1 ml-auto">
+          {post.status === "DRAFT" && (
+            <Button
+              size="sm"
+              onClick={() => publishMut.mutate()}
+              disabled={publishMut.isPending}
+            >
+              Publish
+            </Button>
+          )}
+          {post.status === "PUBLISHED" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => unpublishMut.mutate()}
+              disabled={unpublishMut.isPending}
+            >
+              Unpublish
+            </Button>
+          )}
+          {post.status !== "ARCHIVE" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => archiveMut.mutate()}
+              disabled={archiveMut.isPending}
+            >
+              Archive
+            </Button>
+          )}
+        </div>
       </div>
 
       {updateMut.isError && (

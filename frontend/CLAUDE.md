@@ -167,6 +167,14 @@ Never use barrel/default imports or any other icon library.
 ```
 Sections only render when they have published content.
 
+**Admin panel layout**: Left sidebar (Posts / Tags / Media / Log out) + content area. The
+`/mod/layout.tsx` conditionally renders: no token → narrow centered container (login page);
+has token → full sidebar layout with `QueryProvider` + `TokenProvider`.
+
+**Post status actions**: Available on both the posts list page *and* the edit page header.
+The edit page is the primary place users land after creating a post, so status controls
+(Publish / Unpublish / Archive) must be reachable from there.
+
 **Post type → URL mapping** (via `postHref(type, slug)` in `src/lib/post-href.ts`):
 - `NEWS` → `/news/[slug]`
 - `ARTICLE` → `/articles/[slug]`
@@ -203,6 +211,24 @@ In production with a public hostname, switch back to `remotePatterns`.
 **TipTap `useEditor` — must set `immediatelyRender: false` in Next.js**
 Without this flag, TipTap detects SSR and throws a hydration mismatch error on client
 components that render inside a server-rendered tree. Always include it in `useEditor({...})`.
+
+**`zodResolver` + Zod schemas with `.default()` — type mismatch with `useForm<T>`**
+`zodResolver(schema)` infers the *input* type (fields with `.default()` are optional).
+`useForm<PostCreate>` expects a resolver typed against the *output* type (all fields required).
+Fix: cast the resolver — `zodResolver(schema) as unknown as Resolver<PostCreate>`.
+Import `Resolver` from `react-hook-form`.
+
+**Admin panel token pattern — HTTP-only cookie → React context**
+HTTP-only cookies can't be read by client-side JS. Pattern for the `/mod` admin panel:
+1. `/mod/layout.tsx` (Server Component) reads the cookie via `getServerToken()`
+2. Passes token to `<TokenProvider token={token}>` (Client Component, `src/components/mod/token-context.tsx`)
+3. All client components call `useToken()` to get the token for `client.ts` API calls
+This avoids creating proxy route handlers for every admin endpoint.
+
+**`/mod/login` must be excluded from the proxy redirect**
+The proxy matcher covers all `/mod/*` routes. Without an explicit `pathname === "/mod/login"`
+early return, unauthenticated requests loop: proxy redirects to `/mod/login`, which also
+matches the middleware, causing infinite redirects.
 
 **`PostListItem` vs `Post` — two different backend response shapes**
 `GET /posts` returns `PostListItem[]` (no `content`/`post_metadata`/`updated_at`).
