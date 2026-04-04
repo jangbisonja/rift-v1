@@ -14,6 +14,7 @@ interface RichEditorProps {
 
 export function RichEditor({ value, onChange }: RichEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [StarterKit, Image],
     content: value ?? { type: "doc", content: [] },
     onUpdate({ editor }) {

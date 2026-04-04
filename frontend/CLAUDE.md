@@ -200,6 +200,10 @@ Next.js 15/16 blocks image optimization requests that resolve to private IPs (12
 This is fine because the backend already converts all uploads to WebP.
 In production with a public hostname, switch back to `remotePatterns`.
 
+**TipTap `useEditor` — must set `immediatelyRender: false` in Next.js**
+Without this flag, TipTap detects SSR and throws a hydration mismatch error on client
+components that render inside a server-rendered tree. Always include it in `useEditor({...})`.
+
 **`PostListItem` vs `Post` — two different backend response shapes**
 `GET /posts` returns `PostListItem[]` (no `content`/`post_metadata`/`updated_at`).
 `GET /posts/{id}` returns `Post` (full). Detail pages must call `getPost(id)` after the
