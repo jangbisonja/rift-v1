@@ -14,6 +14,7 @@ class PostCreate(BaseModel):
     content: dict[str, Any] = Field(default_factory=dict)
     post_metadata: dict[str, Any] = Field(default_factory=dict)
     tag_ids: list[uuid.UUID] = Field(default_factory=list)
+    cover_media_id: uuid.UUID | None = None
 
 
 class PostUpdate(BaseModel):
@@ -21,6 +22,7 @@ class PostUpdate(BaseModel):
     content: dict[str, Any] | None = None
     post_metadata: dict[str, Any] | None = None
     tag_ids: list[uuid.UUID] | None = None
+    cover_media_id: uuid.UUID | None = None
 
 
 class MediaRead(BaseModel):
@@ -46,6 +48,7 @@ class PostRead(BaseModel):
     published_at: datetime | None
     tags: list[TagRead]
     media: list[MediaRead]
+    cover_media: MediaRead | None
 
 
 class PostList(BaseModel):
@@ -60,3 +63,4 @@ class PostList(BaseModel):
     published_at: datetime | None
     tags: list[TagRead]
     media: list[MediaRead]
+    cover_media: MediaRead | None

@@ -3,7 +3,7 @@ import { mediaUrl } from "@/lib/media";
 import type { MediaRead } from "@/lib/schemas";
 
 interface CoverImageProps {
-  media: MediaRead[];
+  cover: MediaRead | null;
   alt: string;
   className?: string;
   fill?: boolean;
@@ -11,9 +11,7 @@ interface CoverImageProps {
   height?: number;
 }
 
-export function CoverImage({ media, alt, className, fill, width = 640, height = 360 }: CoverImageProps) {
-  const cover = media[0];
-
+export function CoverImage({ cover, alt, className, fill, width = 640, height = 360 }: CoverImageProps) {
   if (!cover) {
     return (
       <div

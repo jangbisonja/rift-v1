@@ -23,4 +23,4 @@ class Media(Base):
     original_name: Mapped[str] = mapped_column(String(256), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    post: Mapped["Post"] = relationship("Post", back_populates="media")
+    post: Mapped["Post"] = relationship("Post", back_populates="media", foreign_keys="[Media.post_id]")

@@ -67,7 +67,8 @@ export default function EditPostPage() {
     onSuccess: (updated) => qc.setQueryData(["post", id], updated),
   });
 
-  const uploadMut = useMutation({
+  // Gallery attach — for editor library picker
+  const galleryUploadMut = useMutation({
     mutationFn: async (file: File) => {
       const m = await uploadMedia(file, token);
       return attachMedia(m.id, id, token);
@@ -83,9 +84,9 @@ export default function EditPostPage() {
     },
   });
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleGalleryFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) uploadMut.mutate(file);
+    if (file) galleryUploadMut.mutate(file);
     e.target.value = "";
   }
 
@@ -114,6 +115,7 @@ export default function EditPostPage() {
     content: post.content,
     post_metadata: post.post_metadata,
     tag_ids: post.tags.map((t) => t.id),
+    cover_media_id: post.cover_media?.id ?? null,
   };
 
   return (
@@ -162,43 +164,57 @@ export default function EditPostPage() {
       <PostForm
         key={post.id}
         defaultValues={defaultValues}
-        onSubmit={async (data) => {
-          await updateMut.mutateAsync(data);
-        }}
+        onSubmit={async (data) => { await updateMut.mutateAsync(data); }}
         isSubmitting={updateMut.isPending}
         submitLabel="Save changes"
+        initialCoverMedia={post.cover_media}
+        onCoverUpload={async (file) => {
+          // Upload only — cover_media_id is set via the form's PUT /posts/{id}
+          return uploadMedia(file, token);
+        }}
+        onEditorImageUpload={async (file) => {
+          // Upload only — body images are NOT attached to post.media[]
+          const m = await uploadMedia(file, token);
+          return mediaUrl(m.path);
+        }}
+        mediaLibrary={post.media}
       />
 
-      {/* ── Media ────────────────────────────────────────────── */}
+      {/* ── Gallery (for editor library picker) ─────────────── */}
       <div className="border-t pt-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Media</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Gallery</h2>
+            <p className="text-xs text-muted-foreground">
+              Attached images are available in the editor library picker.
+            </p>
+          </div>
           <div>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={handleFileChange}
+              onChange={handleGalleryFileChange}
             />
             <Button
               size="sm"
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadMut.isPending}
+              disabled={galleryUploadMut.isPending}
             >
               <Upload className="size-4" />
-              {uploadMut.isPending ? "Uploading…" : "Upload & attach"}
+              {galleryUploadMut.isPending ? "Uploading…" : "Upload & attach"}
             </Button>
           </div>
         </div>
 
-        {uploadMut.isError && (
+        {galleryUploadMut.isError && (
           <p className="text-destructive text-sm">Upload failed.</p>
         )}
 
         {post.media.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No media attached.</p>
+          <p className="text-sm text-muted-foreground">No images attached to gallery.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {post.media.map((m) => (
@@ -235,7 +251,7 @@ export default function EditPostPage() {
     <ConfirmDialog
       open={confirmMediaId !== null}
       title="Delete this image?"
-      description="It will be removed from the post and deleted permanently."
+      description="It will be removed from the gallery and deleted permanently."
       onConfirm={() => confirmMediaId && deleteMediaMut.mutate(confirmMediaId)}
       onCancel={() => setConfirmMediaId(null)}
     />

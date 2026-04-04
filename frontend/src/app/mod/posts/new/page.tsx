@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { createPost } from "@/lib/api/client";
+import { createPost, uploadMedia } from "@/lib/api/client";
+import { mediaUrl } from "@/lib/media";
 import { useToken } from "@/components/mod/token-context";
 import { useToast } from "@/components/toast-provider";
 import { PostForm } from "@/components/mod/post-form";
@@ -28,7 +29,16 @@ export default function NewPostPage() {
     <div className="space-y-6 max-w-3xl">
       <Breadcrumbs items={[{ label: "Posts", href: "/mod/posts" }, { label: "New post" }]} />
       <h1 className="text-2xl font-bold">New post</h1>
-      <PostForm onSubmit={handleSubmit} isSubmitting={isPending} submitLabel="Create post" />
+      <PostForm
+        onSubmit={handleSubmit}
+        isSubmitting={isPending}
+        submitLabel="Create post"
+        onCoverUpload={async (file) => uploadMedia(file, token)}
+        onEditorImageUpload={async (file) => {
+          const m = await uploadMedia(file, token);
+          return mediaUrl(m.path);
+        }}
+      />
     </div>
   );
 }

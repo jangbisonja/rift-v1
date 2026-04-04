@@ -75,6 +75,7 @@ async def create(data: PostCreate, session: AsyncSession) -> Post:
         content=data.content,
         post_metadata=data.post_metadata,
         tags=tags,
+        cover_media_id=data.cover_media_id,
     )
     session.add(post)
     await session.commit()
@@ -93,6 +94,8 @@ async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) ->
         post.post_metadata = data.post_metadata
     if data.tag_ids is not None:
         post.tags = await _resolve_tags(data.tag_ids, session)
+    if "cover_media_id" in data.model_fields_set:
+        post.cover_media_id = data.cover_media_id
     await session.commit()
     await session.refresh(post)
     return post

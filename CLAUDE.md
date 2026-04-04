@@ -42,6 +42,73 @@ What to record:
 - Constraints imposed by the stack or environment
 - Decisions that look wrong but are intentional
 
+## Deployment (v1.kekl.ru)
+
+### Infrastructure
+
+- **Server**: VPS at `95.81.100.239`
+- **Domain**: `https://v1.kekl.ru`
+- **Process manager**: pm2 (runs as `datanewb`, survives reboots via systemd)
+- **Reverse proxy**: nginx with Let's Encrypt TLS
+
+### Routing
+
+```
+https://v1.kekl.ru/        → Next.js  :3000
+https://v1.kekl.ru/be/     → FastAPI   :8000  (/be/ prefix stripped by nginx)
+```
+
+nginx config: `/etc/nginx/sites-available/rift`
+pm2 ecosystem: `rift-v1/ecosystem.config.js`
+
+### Env files (not committed)
+
+| File | Key var |
+|---|---|
+| `backend/.env` | `CORS_ORIGINS`, `ENVIRONMENT=staging` |
+| `frontend/.env.local` | `NEXT_PUBLIC_API_URL=https://v1.kekl.ru/be` |
+
+### Deploy after code changes
+
+**Frontend only:**
+```bash
+cd ~/rift-v1/frontend
+git pull
+npm run build
+pm2 restart rift-frontend
+```
+
+**Backend only:**
+```bash
+cd ~/rift-v1/backend
+git pull
+# if new dependencies:
+venv/bin/pip install -r requirements/dev.txt
+# if new migrations:
+venv/bin/alembic upgrade head
+pm2 restart rift-backend
+```
+
+**Both layers:**
+```bash
+cd ~/rift-v1
+git pull
+cd frontend && npm run build && cd ..
+cd backend && venv/bin/alembic upgrade head && cd ..
+pm2 restart all
+```
+
+### Process management
+
+```bash
+pm2 list                  # status of all processes
+pm2 logs                  # live logs (Ctrl+C to exit)
+pm2 logs rift-backend     # backend logs only
+pm2 logs rift-frontend    # frontend logs only
+pm2 restart rift-backend  # restart one
+pm2 restart all           # restart both
+```
+
 ## API Contract
 
 This is the shared contract between backend and frontend. Both sides must treat this
@@ -73,12 +140,14 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
 **Two post response shapes:**
-- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, created_at, published_at, tags[], media[]`. No `content`, no `post_metadata`.
+- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, created_at, published_at, tags[], media[], cover_media`. No `content`, no `post_metadata`.
 - `PostRead` — returned by `GET /posts/{id}`: all of the above plus `content`, `post_metadata`, `updated_at`.
 
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
 **Post `post_metadata`** — arbitrary JSON; SEO fields + type-specific data (e.g. `promo_code` for `PROMO`)
+
+**Post `cover_media`** — `MediaRead | null`. The designated cover image for the post. Set via `cover_media_id` in create/update requests. Distinct from `media[]` (body media attached via the attach endpoint). TipTap-uploaded images must NOT be attached via the attach endpoint — they are unattached assets referenced only within `content` JSON.
 
 **Media `path`** — relative path: `uploads/YYYY/MM/DD/{uuid}.webp` — always WebP.
 Served as static files at `GET /uploads/...` (no auth required).

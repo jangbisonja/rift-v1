@@ -36,6 +36,16 @@ class Post(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cover_media_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="SET NULL", use_alter=True, name="post_cover_media_id_fkey"),
+        nullable=True,
+    )
 
     tags: Mapped[list["Tag"]] = relationship("Tag", secondary=post_tag, lazy="selectin")
-    media: Mapped[list["Media"]] = relationship("Media", back_populates="post", lazy="selectin")
+    media: Mapped[list["Media"]] = relationship(
+        "Media", back_populates="post", lazy="selectin", foreign_keys="[Media.post_id]"
+    )
+    cover_media: Mapped["Media | None"] = relationship(
+        "Media", lazy="selectin", foreign_keys="[Post.cover_media_id]"
+    )

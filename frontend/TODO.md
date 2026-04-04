@@ -16,7 +16,7 @@ _(nothing in progress)_
 
 ## Upcoming
 
-- [ ] **TipTap media integration** — Upload local files + pick from media library in editor toolbar. Full flow in `docs/ARCHITECTURE.md`.
+- [x] **TipTap media integration** — Upload local files + pick from media library in editor toolbar. ✓
 - [ ] **Per-category page variations** — Events: date-grouped; Promos: promo code display; Articles: reading time; News: pinned posts. Container already uniform.
 
 ## Done

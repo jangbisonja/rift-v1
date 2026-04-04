@@ -52,10 +52,57 @@ Each module: `router.py`, `schemas.py`, `models.py`, `service.py`,
 **Post** — `id` (UUID PK), `type` (PostType enum), `status` (PostStatus enum),
 `title`, `slug` (unique), `content` (JSON/TipTap), `post_metadata` (JSON/SEO),
 `created_at`, `updated_at`, `published_at`. M2M → `tags` via `post_tag`. O2M → `media`.
+FK → `cover_media_id` (nullable, `SET NULL on delete`) — see Cover Image task below.
 
 Two response schemas:
 - `PostList` — list endpoint shape: excludes `content`, `post_metadata`, `updated_at`. Includes `media[]`.
 - `PostRead` — detail endpoint shape: full post including all fields and `media[]`.
+
+### Pending: Cover Image (`cover_media_id`)
+
+**Context:** The frontend currently uses `post.media[0]` as the cover image — a positional
+convention with no semantic backing. This breaks when body images uploaded via the rich
+text editor are also attached to `post.media[]`. Full analysis in `frontend/docs/ARCHITECTURE.md`.
+
+**Required backend changes:**
+
+1. **Migration** — add nullable FK column to `post`:
+   ```sql
+   ALTER TABLE post
+     ADD COLUMN cover_media_id UUID REFERENCES media(id) ON DELETE SET NULL;
+   ```
+   Create as `2026-04-xx_add-cover-media-id.py` (date-named, Alembic autogenerate or hand-written).
+
+2. **`Post` model** (`src/posts/models.py`) — add:
+   ```python
+   cover_media_id: Mapped[uuid.UUID | None] = mapped_column(
+       UUID(as_uuid=True), ForeignKey("media.id", ondelete="SET NULL"), nullable=True
+   )
+   cover_media: Mapped["Media | None"] = relationship(
+       "Media", foreign_keys=[cover_media_id], lazy="selectin"
+   )
+   ```
+   Note: `media` relationship uses `back_populates="post"` from the `Media` side — the new
+   `cover_media` relationship is a second relationship to `Media` with an explicit `foreign_keys`
+   arg to disambiguate.
+
+3. **`PostCreate` / `PostUpdate` schemas** — add optional field:
+   ```python
+   cover_media_id: uuid.UUID | None = None
+   ```
+
+4. **`PostList` + `PostRead` response schemas** — add:
+   ```python
+   cover_media: MediaRead | None = None
+   ```
+   where `MediaRead` is `id, path, original_name` only (same shape already used for `media[]` items).
+
+5. **Service layer** (`src/posts/service.py`) — `create_post` and `update_post` must
+   accept and persist `cover_media_id`. No special logic needed — it's a plain nullable FK.
+
+**API contract change (update `rift-v1/CLAUDE.md` after implementing):**
+- `POST /posts` and `PUT /posts/{id}` bodies gain optional `cover_media_id: string | null`
+- `PostListItem` and `PostRead` responses gain `cover_media: MediaRead | null`
 
 **PostType**: `NEWS`, `ARTICLE`, `PROMO`, `EVENT`
 **PostStatus**: `DRAFT`, `PUBLISHED`, `ARCHIVE`

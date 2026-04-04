@@ -55,6 +55,7 @@ export const PostListItemSchema = z.object({
   published_at: z.string().nullable(),
   tags: z.array(TagSchema),
   media: z.array(MediaReadSchema),
+  cover_media: MediaReadSchema.nullable(),
 });
 export type PostListItem = z.infer<typeof PostListItemSchema>;
 
@@ -74,6 +75,7 @@ export const PostSchema = z.object({
   published_at: z.string().nullable(),
   tags: z.array(TagSchema),
   media: z.array(MediaReadSchema),
+  cover_media: MediaReadSchema.nullable(),
 });
 export type Post = z.infer<typeof PostSchema>;
 
@@ -85,6 +87,7 @@ export const PostCreateSchema = z.object({
   content: z.record(z.string(), z.unknown()).default({ type: "doc", content: [] }),
   post_metadata: z.record(z.string(), z.unknown()).default({}),
   tag_ids: z.array(z.string().uuid()).default([]),
+  cover_media_id: z.string().uuid().nullable().default(null),
 });
 export type PostCreate = z.infer<typeof PostCreateSchema>;
 

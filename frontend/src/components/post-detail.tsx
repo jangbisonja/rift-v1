@@ -34,9 +34,9 @@ export function PostDetail({ post }: PostDetailProps) {
           </Link>
         )}
         <header className="mb-8 space-y-4">
-          {post.media.length > 0 && (
+          {post.cover_media && (
             <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
-              <CoverImage media={post.media} alt={post.title} fill />
+              <CoverImage cover={post.cover_media} alt={post.title} fill />
             </div>
           )}
           <div className="space-y-2">

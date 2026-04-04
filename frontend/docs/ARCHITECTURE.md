@@ -105,65 +105,93 @@ any DOM dependency. Supports all StarterKit node types + Image extension.
 
 ---
 
-## TipTap Media Integration — Proposed Flow
+## TipTap Media Integration
 
-### Current State
+### Implemented Flow
 
-The editor supports image insertion via URL prompt only (`window.prompt("Image URL")`).
-Images inserted this way are external URLs — they are not uploaded to the backend and
-not tracked by the media system. This means:
+`RichEditor` accepts two optional props:
+- `onUploadImage(file: File) → Promise<string>` — called when user uploads via toolbar; returns the URL to insert
+- `mediaLibrary: MediaRead[]` — the post's currently attached media; shown in the picker modal
 
-- Images can become unavailable if the external URL changes.
-- There is no association between editor images and the post's media attachments.
-- The media section on the edit page is entirely separate from the editor.
+Upload/attach logic lives in the page, not the editor:
+- **Edit page** (`posts/[id]/page.tsx`): upload → attach to post → `invalidateQueries(["post", id])` → return URL
+- **Create page** (`posts/new/page.tsx`): upload only — no postId exists yet; the URL is captured in the TipTap JSON content; the media row is unattached until the user manually attaches it from the media section after post creation
 
-### Proposed End-to-End Flow
+`MediaPickerModal` (`src/components/mod/media-picker-modal.tsx`) shows the post's attached media as a grid. Selecting an image inserts its URL into the editor and closes the modal.
 
+Toolbar buttons:
+- `ImagePlus` (upload) — shown when `onUploadImage` prop provided
+- `Images` (library picker) — shown when `mediaLibrary` prop provided; disabled (not hidden) when empty
+- `Link2` (URL fallback) — shown when `onUploadImage` is NOT provided (backwards-compatible default)
+
+### Orphan Handling
+
+If a user uploads via the editor on the create page and then discards the post, the media row exists unattached (`post_id = null`). This is intentional for MVP — orphans are visible and deletable in `/mod/media`.
+
+---
+
+## Cover Image Architecture — Open Issue
+
+### Problem Statement
+
+The current system has no explicit cover image concept at the data layer. Cover images
+are determined by a frontend convention: `post.media[0]` = cover. This is fragile and
+causes a role collision: body images attached via the TipTap editor appear in `media[]`
+and can become the "cover" if they are the first item.
+
+### Root Cause
+
+The backend `Media` model has no role field. All items in `post.media[]` are equal.
+The `media[0]` convention is a positional assumption, not a semantic one.
+
+The conflation is triggered when: user uploads inline image via editor → `attachMedia()`
+is called → image joins `post.media[]` → `media[0]` picks it as cover on public pages.
+
+### Recommended Solution (Pending Backend Work)
+
+**Add `cover_media_id: UUID | null` as an explicit FK on the `Post` model.**
+
+```sql
+ALTER TABLE post ADD COLUMN cover_media_id UUID REFERENCES media(id) ON DELETE SET NULL;
 ```
-User clicks "Upload Image" in TipTap toolbar
-  → Hidden <input type="file"> triggered
-  → POST /media/upload  → Media { id, path, original_name }
-  → POST /media/{id}/attach/{post_id}
-  → editor.chain().setImage({ src: mediaUrl(media.path) }).run()
-  → Image appears in editor content at correct backend URL
-```
 
-```
-User clicks "Pick from Media" in TipTap toolbar
-  → MediaPickerModal opens (lists media attached to this post + all unattached)
-  → User selects an image
-  → If not yet attached: POST /media/{id}/attach/{post_id}
-  → editor.chain().setImage({ src: mediaUrl(media.path) }).run()
-```
+This separates the concern explicitly at the database level:
+- `post.cover_media_id` → the designated cover (nullable, FK-enforced, auto-cleared on delete)
+- `post.media[]` → all attached files (gallery, body images, downloads)
 
-### Required Changes
+**Body images should NOT be attached to `post.media[]`** via `attachMedia`. They are
+embedded as absolute URLs in the TipTap JSON content — they live at their URL and do not
+need to be tracked in the media attachment table. Only cover images and explicitly
+attached gallery assets should be in `post.media[]`.
 
-1. **`RichEditor` props** — add `postId: string` and `token: string` to enable
-   server calls from within the toolbar.
+### API Contract Changes Required (Backend-First)
 
-2. **Toolbar buttons** — replace/augment the current URL-prompt Image button with:
-   - "Upload Image" — file input trigger → upload → attach → insert
-   - "Media Library" — opens `MediaPickerModal`
-
-3. **`MediaPickerModal`** — new client component. Fetches `GET /media` (superuser),
-   displays a thumbnail grid, returns selected `Media` object on confirm.
-
-4. **Orphan handling** — If a user uploads an image and then discards the post without
-   saving, the media record exists but is unattached (`post_id = null`). This is
-   acceptable for MVP; orphans are visible and deletable in `/mod/media`. A future
-   improvement would be to track all `src` URLs in the saved JSON and reconcile
-   attachments on `PUT /posts/{id}`.
-
-### Impact Analysis
-
-| Area | Change required |
+| Change | Description |
 |---|---|
-| `rich-editor.tsx` | New props (`postId`, `token`); new toolbar buttons; upload/attach logic |
-| `post-form.tsx` | Must pass `postId` (undefined on create, post.id on edit) and `token` to `RichEditor` |
-| `posts/new/page.tsx` | No post ID available at create time — upload+insert without attach; attach on first save |
-| `posts/[id]/page.tsx` | Post ID available — full upload+attach+insert flow |
-| New component | `MediaPickerModal` — thumbnail grid with confirm/cancel |
-| Backend | No changes required — existing endpoints cover all operations |
+| Migration | Add `cover_media_id` column to `post` table |
+| `PostRead` / `PostList` | Expose `cover_media: MediaRead \| null` in responses |
+| `POST /posts`, `PUT /posts/{id}` | Accept `cover_media_id: str \| null` in request body |
+
+### Frontend Changes (After Backend Ships)
+
+| Area | Change |
+|---|---|
+| `src/lib/schemas/index.ts` | Add `cover_media: MediaReadSchema.nullable()` to `PostSchema` + `PostListItemSchema`; add `cover_media_id` to `PostCreateSchema` |
+| `src/components/cover-image.tsx` | Accept `coverMedia: MediaRead \| null` instead of `media: MediaRead[]` |
+| `src/components/post-detail.tsx`, `post-hero.tsx`, `post-row-item.tsx` | Pass `post.cover_media` instead of `post.media` |
+| `src/app/mod/posts/[id]/page.tsx` | Add dedicated "Cover Image" section with upload + remove controls |
+| Editor upload path | Remove `attachMedia` call from `onEditorImageUpload` on edit page |
+
+### Interim State (Current)
+
+Until the backend adds `cover_media_id`:
+- `media[0]` convention remains in place
+- Body images uploaded via the editor on the edit page ARE attached to `post.media[]`
+  and CAN become the cover — this is a known limitation
+- Workaround: upload cover image first so it becomes `media[0]`; upload body images after
+
+Do not patch this with `post_metadata.cover_media_id` — that approach has no FK integrity
+and creates a soft dependency that is harder to migrate later.
 
 ---
 

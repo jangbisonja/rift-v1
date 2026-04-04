@@ -1,19 +1,29 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useForm, Controller, type Resolver, type ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PostCreateSchema, type PostCreate } from "@/lib/schemas";
+import { PostCreateSchema, type PostCreate, type MediaRead } from "@/lib/schemas";
 import { RichEditor } from "@/components/editor/rich-editor";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { listTags } from "@/lib/api/client";
-import { useState } from "react";
+import { mediaUrl } from "@/lib/media";
+import { ImagePlus, X } from "lucide-react";
 
 interface PostFormProps {
   defaultValues?: Partial<PostCreate>;
   onSubmit: (data: PostCreate) => Promise<void>;
   submitLabel?: string;
   isSubmitting?: boolean;
+  /** The currently set cover image — shown in the cover section. */
+  initialCoverMedia?: MediaRead | null;
+  /** Upload a file and return the resulting MediaRead (upload only, no attach). */
+  onCoverUpload?: (file: File) => Promise<MediaRead>;
+  /** Upload handler for TipTap inline images — returns URL to insert. */
+  onEditorImageUpload?: (file: File) => Promise<string>;
+  /** Media attached to this post, shown in the editor library picker. */
+  mediaLibrary?: MediaRead[];
 }
 
 export function PostForm({
@@ -21,16 +31,25 @@ export function PostForm({
   onSubmit,
   submitLabel = "Save",
   isSubmitting,
+  initialCoverMedia,
+  onCoverUpload,
+  onEditorImageUpload,
+  mediaLibrary,
 }: PostFormProps) {
   const { data: tags = [] } = useQuery({
     queryKey: ["tags"],
     queryFn: () => listTags(),
   });
 
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [displayCover, setDisplayCover] = useState<MediaRead | null>(initialCoverMedia ?? null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<PostCreate>({
     // zodResolver infers the input type (fields with .default() are optional),
@@ -41,9 +60,29 @@ export function PostForm({
       content: { type: "doc", content: [] },
       post_metadata: {},
       tag_ids: [],
+      cover_media_id: initialCoverMedia?.id ?? null,
       ...defaultValues,
     },
   });
+
+  async function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !onCoverUpload) return;
+    e.target.value = "";
+    setIsUploadingCover(true);
+    try {
+      const media = await onCoverUpload(file);
+      setDisplayCover(media);
+      setValue("cover_media_id", media.id);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  }
+
+  function removeCover() {
+    setDisplayCover(null);
+    setValue("cover_media_id", null);
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -112,6 +151,51 @@ export function PostForm({
         </div>
       )}
 
+      {/* Cover Image */}
+      {onCoverUpload && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Cover image</label>
+          {displayCover ? (
+            <div className="relative w-48 rounded-lg overflow-hidden border bg-muted/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mediaUrl(displayCover.path)}
+                alt={displayCover.original_name}
+                className="aspect-video w-full object-cover"
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                onClick={removeCover}
+                className="absolute top-1.5 right-1.5 size-6"
+              >
+                <X className="size-3" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={isUploadingCover}
+              className="flex h-24 w-48 items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background text-sm text-muted-foreground hover:border-ring hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <ImagePlus className="size-4" />
+              {isUploadingCover ? "Uploading…" : "Upload cover"}
+            </button>
+          )}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverFileChange}
+          />
+          {/* Hidden field so cover_media_id is part of the form submission */}
+          <input type="hidden" {...register("cover_media_id")} />
+        </div>
+      )}
+
       {/* Content */}
       <div>
         <label className="block text-sm font-medium mb-1.5">Content</label>
@@ -119,7 +203,12 @@ export function PostForm({
           name="content"
           control={control}
           render={({ field }) => (
-            <RichEditor value={field.value} onChange={field.onChange} />
+            <RichEditor
+              value={field.value}
+              onChange={field.onChange}
+              onUploadImage={onEditorImageUpload}
+              mediaLibrary={mediaLibrary}
+            />
           )}
         />
       </div>

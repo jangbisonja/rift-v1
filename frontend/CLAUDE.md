@@ -242,6 +242,25 @@ The proxy matcher covers all `/mod/*` routes. Without an explicit `pathname === 
 early return, unauthenticated requests loop: proxy redirects to `/mod/login`, which also
 matches the middleware, causing infinite redirects.
 
+**Cover image is `post.cover_media`, not `post.media[0]`**
+`post.cover_media: MediaRead | null` is the designated cover, set via `cover_media_id` in
+create/update requests. `post.media[]` is the gallery (items attached via the attach endpoint,
+used by the editor library picker). TipTap body images are uploaded and inserted by URL only —
+they must NOT be attached via the attach endpoint. `CoverImage` component accepts `cover: MediaRead | null`.
+
+**Cover image is saved atomically with the post form**
+`PostForm` manages the cover via `initialCoverMedia` prop (display) + `onCoverUpload` prop
+(upload callback returning `MediaRead`). `cover_media_id` is a hidden form field — on submit,
+it goes in the `PUT /posts/{id}` body alongside title/content/etc. No separate mutation needed.
+
+**TipTap media integration — upload + library picker pattern**
+`RichEditor` accepts two optional props: `onUploadImage(file) → Promise<string>` (returns URL
+to insert) and `mediaLibrary: MediaRead[]` (shows a picker button for gallery-attached media).
+Upload/attach logic lives in the page, not the editor. Body images: upload only, no attach.
+Gallery images: upload + attach via `POST /media/{id}/attach/{post_id}` — available in picker.
+`MediaPickerModal` (`src/components/mod/media-picker-modal.tsx`) shows the gallery grid.
+If `mediaLibrary` prop is absent, the editor hides the picker button.
+
 **`PostListItem` vs `Post` — two different backend response shapes**
 `GET /posts` returns `PostListItem[]` (no `content`/`post_metadata`/`updated_at`).
 `GET /posts/{id}` returns `Post` (full). Detail pages must call `getPost(id)` after the
