@@ -1,5 +1,6 @@
 import { listPosts } from "@/lib/api/client";
 import { PromoItem } from "@/components/promo-item";
+import { PageContainer } from "@/components/page-container";
 
 export const revalidate = 60;
 
@@ -12,7 +13,7 @@ export default async function PromosPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <PageContainer>
       <h1 className="mb-8 text-3xl font-bold">Promotions</h1>
       {posts.length === 0 ? (
         <p className="text-muted-foreground">No active promotions.</p>
@@ -23,6 +24,6 @@ export default async function PromosPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

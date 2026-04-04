@@ -4,6 +4,7 @@ import { PostHero } from "@/components/post-hero";
 import { PostRowItem } from "@/components/post-row-item";
 import { PromoItem } from "@/components/promo-item";
 import type { PostListItem } from "@/lib/schemas";
+import { PageContainer } from "@/components/page-container";
 
 export const revalidate = 60;
 
@@ -27,7 +28,7 @@ export default async function HomePage() {
   const articlePairs = [articles.slice(0, 2), articles.slice(2, 4)].filter((g) => g.length > 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 space-y-14">
+    <PageContainer className="space-y-14">
 
       {/* ── News + Promos ──────────────────────────────────────────────────── */}
       {(news.length > 0 || promos.length > 0) && (
@@ -95,6 +96,6 @@ export default async function HomePage() {
       {news.length === 0 && articles.length === 0 && events.length === 0 && promos.length === 0 && (
         <p className="text-center py-20 text-muted-foreground">No published content yet.</p>
       )}
-    </div>
+    </PageContainer>
   );
 }

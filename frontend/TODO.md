@@ -10,6 +10,14 @@ _(nothing in progress)_
 - [x] **Admin loading skeletons & error states** — skeleton rows/cards on posts, tags, media, edit page; retry buttons on error. ✓
 - [x] **Confirm dialog** — `ConfirmDialog` component replaces `window.confirm` on all destructive actions. ✓
 - [x] **Slug display on edit page** — read-only mono slug below the title. ✓
+- [x] **TipTap content rendering** — fixed: `generateHTML` (DOM-dependent) replaced with custom SSR-safe JSON→HTML renderer. ✓
+- [x] **Hero image size** — reduced from `aspect-[16/9]` to `aspect-[3/1]`. ✓
+- [x] **Layout consistency** — `PageContainer` component centralizes `max-w-7xl` layout; applied to all public pages and detail view. ✓
+
+## Upcoming
+
+- [ ] **TipTap media integration** — Upload local files + pick from media library in editor toolbar. Full flow in `docs/ARCHITECTURE.md`.
+- [ ] **Per-category page variations** — Events: date-grouped; Promos: promo code display; Articles: reading time; News: pinned posts. Container already uniform.
 
 ## Done
 

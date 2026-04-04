@@ -167,6 +167,11 @@ Never use barrel/default imports or any other icon library.
 ```
 Sections only render when they have published content.
 
+**`PageContainer` — single source of truth for page layout width**
+All public-facing pages and the post detail use `src/components/page-container.tsx`
+(`max-w-7xl px-4 py-10`). Detail pages constrain prose internally with `max-w-3xl mx-auto`
+inside `PageContainer`. Never hardcode `max-w-7xl` directly in a page — use the component.
+
 **Admin panel layout**: Left sidebar (Posts / Tags / Media / Log out) + content area. The
 `/mod/layout.tsx` conditionally renders: no token → narrow centered container (login page);
 has token → full sidebar layout with `QueryProvider` + `TokenProvider`.
@@ -211,6 +216,13 @@ In production with a public hostname, switch back to `remotePatterns`.
 **TipTap `useEditor` — must set `immediatelyRender: false` in Next.js**
 Without this flag, TipTap detects SSR and throws a hydration mismatch error on client
 components that render inside a server-rendered tree. Always include it in `useEditor({...})`.
+
+**TipTap v3 `generateHTML` is NOT usable server-side — use the custom renderer**
+`generateHTML` from `@tiptap/core` v3 requires `document.createDocumentFragment` (DOM).
+In a Server Component (Node.js) this throws `window is not defined` / `createDocumentFragment
+is not a function`, silently caught by try/catch → empty content rendered.
+Fix: `src/components/rich-text-content.tsx` uses a custom DOM-free recursive renderer.
+Never re-introduce `generateHTML` in a Server Component.
 
 **`zodResolver` + Zod schemas with `.default()` — type mismatch with `useForm<T>`**
 `zodResolver(schema)` infers the *input* type (fields with `.default()` are optional).
