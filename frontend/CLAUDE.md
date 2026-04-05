@@ -212,7 +212,7 @@ Turbopack is default for `next dev` and `next build`. Config moves out of `exper
 
 **Next.js router cache causes stale admin pages after logout**
 After logout, previously visited `/mod/*` pages are served from the browser's in-memory
-router cache without hitting the proxy. Fix: `staleTimes: { dynamic: 0 }` in `next.config.ts`
+router cache without hitting the proxy. Fix: `experimental.staleTimes: { dynamic: 0 }` in `next.config.ts`
 disables the router cache for dynamic routes, ensuring every navigation makes a fresh server
 request. Do not remove this setting — without it, authenticated page renders survive logout.
 
