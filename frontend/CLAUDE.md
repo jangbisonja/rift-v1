@@ -210,6 +210,12 @@ File is `src/proxy.ts`, export named `proxy` function (or default). Same `NextRe
 **Next.js 16: `experimental.turbopack` → top-level `turbopack`**
 Turbopack is default for `next dev` and `next build`. Config moves out of `experimental`.
 
+**Next.js router cache causes stale admin pages after logout**
+After logout, previously visited `/mod/*` pages are served from the browser's in-memory
+router cache without hitting the proxy. Fix: `staleTimes: { dynamic: 0 }` in `next.config.ts`
+disables the router cache for dynamic routes, ensuring every navigation makes a fresh server
+request. Do not remove this setting — without it, authenticated page renders survive logout.
+
 **Next.js font variables must be on `<html>`, not `<body>`**
 `@layer base { html { font-family: var(--font-sans) } }` reads CSS variables from `<html>`.
 If the variable className is applied to `<body>` instead, the parent can't read it and

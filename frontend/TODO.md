@@ -20,6 +20,8 @@ _(nothing in progress)_
 - [x] **News cards — excerpt display on hero and row items** — `excerpt` added to `PostListItemSchema`; rendered below title+date in `PostHero` and `PostRowItem` with `…` suffix; empty string suppressed. ✓
 - [x] **Typed promo fields** — `start_date`, `end_date`, `promo_code` added to `PostListItemSchema` and `PostSchema`; `listPosts()` accepts `visibility` param; `promo-item.tsx` redesigned with copy-to-clipboard, days-remaining logic, and "Промокоды" label rename. ✓
 - [x] **Post detail container** — Removed inner `max-w-3xl mx-auto` prose constraint; content now spans full `PageContainer` width. Cover image set to `h-[300px]` fixed height, center-cropped via `object-cover object-center`. ✓
+- [x] **Excerpt ellipsis rendering fix** — `\u2026` in JSX text nodes was rendering as literal backslash-u characters (JSX text does not process JS escape sequences). Replaced with the actual `…` character (U+2026) in `post-hero.tsx` and `post-row-item.tsx`. ✓
+- [x] **Router cache / auth persistence fix** — Added `staleTimes: { dynamic: 0 }` to `next.config.ts`. Without this, previously visited `/mod/*` pages were served from the browser's in-memory router cache after logout, bypassing the proxy auth check. ✓
 
 ## Done
 

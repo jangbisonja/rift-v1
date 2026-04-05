@@ -24,7 +24,7 @@ export function PostHero({ post, href }: PostHeroProps) {
           <h2 className="text-xl font-bold leading-snug">{post.title}</h2>
           {post.excerpt && (
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              {post.excerpt}\u2026
+              {post.excerpt}…
             </p>
           )}
         </div>

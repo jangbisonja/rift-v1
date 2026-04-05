@@ -24,7 +24,7 @@ export function PostRowItem({ post, href }: PostRowItemProps) {
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{post.title}</h3>
           {post.excerpt && (
             <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-              {post.excerpt}\u2026
+              {post.excerpt}…
             </p>
           )}
         </div>
