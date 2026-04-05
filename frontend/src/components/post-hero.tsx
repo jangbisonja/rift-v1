@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CoverImage } from "@/components/cover-image";
+import { formatDate } from "@/lib/date";
 import type { PostListItem } from "@/lib/schemas";
 
 interface PostHeroProps {
@@ -17,12 +18,15 @@ export function PostHero({ post, href }: PostHeroProps) {
         <div className="p-5">
           {post.published_at && (
             <p className="mb-2 text-xs text-muted-foreground">
-              {new Date(post.published_at).toLocaleDateString("en-US", {
-                year: "numeric", month: "long", day: "numeric",
-              })}
+              {formatDate(post.published_at)}
             </p>
           )}
           <h2 className="text-xl font-bold leading-snug">{post.title}</h2>
+          {post.excerpt && (
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              {post.excerpt}\u2026
+            </p>
+          )}
         </div>
       </article>
     </Link>

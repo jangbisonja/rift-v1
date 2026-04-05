@@ -37,7 +37,7 @@ export default async function HomePage() {
             {/* News column */}
             {news.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold">News</h2>
+                <h2 className="text-2xl font-bold">Новости</h2>
                 {newsHero && (
                   <PostHero post={newsHero} href={postHref(newsHero.type, newsHero.slug)} />
                 )}
@@ -52,7 +52,7 @@ export default async function HomePage() {
             {/* Promos column */}
             {promos.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Promos</h2>
+                <h2 className="text-2xl font-bold">Акции</h2>
                 <div className="space-y-3">
                   {promos.map((p) => (
                     <PromoItem key={p.id} post={p} />
@@ -67,7 +67,7 @@ export default async function HomePage() {
       {/* ── Events ────────────────────────────────────────────────────────── */}
       {events.length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold">Events</h2>
+          <h2 className="mb-4 text-2xl font-bold">События</h2>
           <div className="space-y-3">
             {events.map((p) => (
               <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
@@ -79,7 +79,7 @@ export default async function HomePage() {
       {/* ── Articles ──────────────────────────────────────────────────────── */}
       {articles.length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold">Articles</h2>
+          <h2 className="mb-4 text-2xl font-bold">Статьи</h2>
           <div className="space-y-6">
             {articlePairs.map((pair, i) => (
               <div key={i} className="grid gap-4 sm:grid-cols-2">
@@ -94,7 +94,7 @@ export default async function HomePage() {
 
       {/* Empty state */}
       {news.length === 0 && articles.length === 0 && events.length === 0 && promos.length === 0 && (
-        <p className="text-center py-20 text-muted-foreground">No published content yet.</p>
+        <p className="text-center py-20 text-muted-foreground">Опубликованных материалов пока нет.</p>
       )}
     </PageContainer>
   );

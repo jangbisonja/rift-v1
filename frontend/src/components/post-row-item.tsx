@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CoverImage } from "@/components/cover-image";
+import { formatDate } from "@/lib/date";
 import type { PostListItem } from "@/lib/schemas";
 
 interface PostRowItemProps {
@@ -17,12 +18,15 @@ export function PostRowItem({ post, href }: PostRowItemProps) {
         <div className="flex min-w-0 flex-col justify-center gap-1">
           {post.published_at && (
             <p className="text-xs text-muted-foreground">
-              {new Date(post.published_at).toLocaleDateString("en-US", {
-                year: "numeric", month: "short", day: "numeric",
-              })}
+              {formatDate(post.published_at)}
             </p>
           )}
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{post.title}</h3>
+          {post.excerpt && (
+            <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
+              {post.excerpt}\u2026
+            </p>
+          )}
         </div>
       </article>
     </Link>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CoverImage } from "@/components/cover-image";
+import { formatDate } from "@/lib/date";
 import type { PostListItem } from "@/lib/schemas";
 
 interface PromoItemProps {
@@ -17,9 +18,7 @@ export function PromoItem({ post }: PromoItemProps) {
           <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{post.title}</h3>
           {post.published_at && (
             <p className="text-xs text-muted-foreground">
-              {new Date(post.published_at).toLocaleDateString("en-US", {
-                month: "short", day: "numeric",
-              })}
+              {formatDate(post.published_at)}
             </p>
           )}
         </div>

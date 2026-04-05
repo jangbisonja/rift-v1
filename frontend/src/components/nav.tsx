@@ -2,10 +2,10 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const LINKS = [
-  { href: "/news", label: "News" },
-  { href: "/articles", label: "Articles" },
-  { href: "/events", label: "Events" },
-  { href: "/promos", label: "Promos" },
+  { href: "/news", label: "Новости" },
+  { href: "/articles", label: "Статьи" },
+  { href: "/events", label: "События" },
+  { href: "/promos", label: "Акции" },
 ];
 
 export function Nav() {

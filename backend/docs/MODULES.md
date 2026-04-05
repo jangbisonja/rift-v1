@@ -46,14 +46,15 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 **Key files**:
 - `constants.py` — `PostType` enum: `NEWS`, `ARTICLE`, `PROMO`, `EVENT`; `PostStatus` enum: `DRAFT`, `PUBLISHED`, `ARCHIVE`
 - `models.py` — `Post` (UUID PK, type, status, title, slug, JSON content, JSON metadata, timestamps, `cover_media_id` FK); `post_tag` M2M table
-- `schemas.py` — `PostCreate`, `PostUpdate`, `PostRead` (full), `PostList` (lightweight)
-- `service.py` — CRUD + `publish()`, `unpublish()`, `archive()`; slug uniqueness enforced here
+- `schemas.py` — `PostCreate`, `PostUpdate`, `PostRead` (full), `PostListItem` (lightweight list shape; includes computed `excerpt` field)
+- `service.py` — CRUD + `publish()`, `unpublish()`, `archive()`; slug uniqueness enforced here; `extract_excerpt(content, word_limit=10)` pure utility (no DB access)
 - `dependencies.py` — `valid_post_id`: resolves post by UUID, raises `PostNotFound` if missing
 
 **Design decisions**:
 - **`content` as JSON (TipTap format)**: schema-agnostic to editor version changes; frontend handles rendering
 - **`post_metadata` as JSON**: SEO fields + type-specific data (e.g. `promo_code` for PROMO) live here — avoids nullable columns per content type
-- **Separate `PostList` schema**: list endpoints omit `content` and `media` to reduce payload size
+- **Separate `PostListItem` schema**: list endpoints omit `content` and `post_metadata` to reduce payload size; `excerpt` is computed at serialization time via a Pydantic `model_validator(mode="before")` that reads `content` off the ORM object without exposing it as an output field
+- **`excerpt` computed in schema validator, not service**: the list query returns ORM objects directly; injecting excerpt in a `mode="before"` validator keeps the router unchanged and avoids a second pass over the result set
 - **`publish()` as a dedicated service method**: explicit business operation with its own timestamp (`published_at`), making the publish event auditable and distinguishable from a plain update
 - **Slug auto-generated from title via `python-slugify`**: consistent, URL-safe slugs; client never computes them
 - **`cover_media_id` as FK on Post (not via attach endpoint)**: cover image is a deliberate editorial choice, distinct from body media; set directly on create/update. TipTap-uploaded images must NOT be attached to the post via the media attach endpoint — they are unattached assets referenced only within `content` JSON.

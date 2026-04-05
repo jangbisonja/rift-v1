@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from slugify import slugify
 from sqlalchemy import select
@@ -10,6 +11,32 @@ from src.posts.exceptions import PostNotFound, SlugAlreadyExists
 from src.posts.models import Post
 from src.posts.schemas import PostCreate, PostUpdate
 from src.tags.models import Tag
+
+
+def extract_excerpt(content: dict[str, Any] | None, word_limit: int = 10) -> str:
+    """Return the first `word_limit` words of plain text from a TipTap JSON document.
+
+    Walks the node tree in document order, collecting every ``text`` node value,
+    then joins them with a single space and returns the first `word_limit` words.
+    Returns ``""`` if *content* is null, empty, or structurally malformed.
+    """
+    if not content or not isinstance(content, dict):
+        return ""
+
+    words: list[str] = []
+
+    def _walk(node: Any) -> None:
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "text":
+            text = node.get("text", "")
+            if isinstance(text, str):
+                words.extend(text.split())
+        for child in node.get("content", []):
+            _walk(child)
+
+    _walk(content)
+    return " ".join(words[:word_limit])
 
 
 async def _resolve_tags(tag_ids: list[uuid.UUID], session: AsyncSession) -> list[Tag]:

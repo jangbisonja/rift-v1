@@ -15,9 +15,9 @@ export default async function EventsPage() {
 
   return (
     <PageContainer>
-      <h1 className="mb-8 text-3xl font-bold">Events</h1>
+      <h1 className="mb-8 text-3xl font-bold">События</h1>
       {posts.length === 0 ? (
-        <p className="text-muted-foreground">No upcoming events.</p>
+        <p className="text-muted-foreground">Предстоящих событий нет.</p>
       ) : (
         <div className="space-y-3">
           {posts.map((p) => (

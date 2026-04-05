@@ -7,12 +7,12 @@ from src.posts import service
 from src.posts.constants import PostStatus, PostType
 from src.posts.dependencies import valid_post_id
 from src.posts.models import Post
-from src.posts.schemas import PostCreate, PostList, PostRead, PostUpdate
+from src.posts.schemas import PostCreate, PostListItem, PostRead, PostUpdate
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
-@router.get("", response_model=list[PostList])
+@router.get("", response_model=list[PostListItem])
 async def list_posts(
     post_type: PostType | None = Query(None),
     post_status: PostStatus | None = Query(None),

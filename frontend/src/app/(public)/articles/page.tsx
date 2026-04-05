@@ -15,9 +15,9 @@ export default async function ArticlesPage() {
 
   return (
     <PageContainer>
-      <h1 className="mb-8 text-3xl font-bold">Articles</h1>
+      <h1 className="mb-8 text-3xl font-bold">Статьи</h1>
       {posts.length === 0 ? (
-        <p className="text-muted-foreground">No published articles yet.</p>
+        <p className="text-muted-foreground">Статей пока нет.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {posts.map((p) => (

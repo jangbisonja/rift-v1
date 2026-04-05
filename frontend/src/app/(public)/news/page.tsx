@@ -18,9 +18,9 @@ export default async function NewsPage() {
 
   return (
     <PageContainer>
-      <h1 className="mb-8 text-3xl font-bold">News</h1>
+      <h1 className="mb-8 text-3xl font-bold">Новости</h1>
       {posts.length === 0 ? (
-        <p className="text-muted-foreground">No published news yet.</p>
+        <p className="text-muted-foreground">Новостей пока нет.</p>
       ) : (
         <div className="space-y-6">
           {hero && <PostHero post={hero} href={postHref(hero.type, hero.slug)} />}

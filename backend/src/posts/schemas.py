@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from src.posts.constants import PostStatus, PostType
 from src.tags.schemas import TagRead
@@ -51,7 +51,7 @@ class PostRead(BaseModel):
     cover_media: MediaRead | None
 
 
-class PostList(BaseModel):
+class PostListItem(BaseModel):
     model_config = {"from_attributes": True}
 
     id: uuid.UUID
@@ -59,8 +59,43 @@ class PostList(BaseModel):
     status: PostStatus
     title: str
     slug: str
+    excerpt: str
     created_at: datetime
     published_at: datetime | None
     tags: list[TagRead]
     media: list[MediaRead]
     cover_media: MediaRead | None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _inject_excerpt(cls, data: Any) -> Any:
+        """Compute and inject ``excerpt`` from the TipTap ``content`` field.
+
+        This validator runs before field assignment. When FastAPI serializes an
+        ORM object with ``from_attributes=True``, the validator receives the ORM
+        instance. We read ``content``, compute the excerpt, then return a plain
+        dict so that ``excerpt`` is present for field validation. Nested ORM
+        objects (tags, media, cover_media) are carried over as-is; their own
+        schemas also have ``from_attributes=True`` and will resolve them.
+        """
+        from src.posts.service import extract_excerpt  # noqa: PLC0415
+
+        if isinstance(data, dict):
+            if "excerpt" not in data:
+                data["excerpt"] = extract_excerpt(data.get("content"))
+            return data
+
+        # ORM instance path
+        return {
+            "id": data.id,
+            "type": data.type,
+            "status": data.status,
+            "title": data.title,
+            "slug": data.slug,
+            "excerpt": extract_excerpt(getattr(data, "content", None)),
+            "created_at": data.created_at,
+            "published_at": data.published_at,
+            "tags": data.tags,
+            "media": data.media,
+            "cover_media": data.cover_media,
+        }

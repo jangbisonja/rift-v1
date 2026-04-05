@@ -146,6 +146,18 @@ Do not import: video, audio, iframe, drag handle, slash commands, or any other e
 | Admin reads | TanStack Query `useQuery` |
 | Admin writes | TanStack Query `useMutation` + invalidate on success |
 
+## Category Rendering
+
+Per-category layout specs (cards, homepage blocks, archive pages): `frontend/docs/CATEGORIES.md`.
+
+## Locale & Timezone
+
+- **Public UI language**: Russian — `ru-RU` locale on all public-facing pages (dates, labels, copy).
+- **Timezone**: `Europe/Moscow` (UTC+3, permanently — no DST). Use this for all date formatting and calculations.
+- Date formatting: `new Intl.DateTimeFormat('ru-RU', { timeZone: 'Europe/Moscow', ... })`
+- Days-remaining calculations: interpret `YYYY-MM-DD` dates as end-of-day in Moscow time.
+- **Shared date utility**: `src/lib/date.ts` exports `formatDate(dateStr: string): string`. Use this on all public pages wherever a date is displayed. The formatter is instantiated once at module level (not per call) using `ru-RU` locale and `Europe/Moscow` timezone.
+
 ## Design Decisions
 
 **Font**: Nunito Sans (Google Fonts) via `next/font/google`. Variable `--font-nunito-sans`
@@ -169,8 +181,8 @@ Sections only render when they have published content.
 
 **`PageContainer` — single source of truth for page layout width**
 All public-facing pages and the post detail use `src/components/page-container.tsx`
-(`max-w-7xl px-4 py-10`). Detail pages constrain prose internally with `max-w-3xl mx-auto`
-inside `PageContainer`. Never hardcode `max-w-7xl` directly in a page — use the component.
+(`max-w-7xl px-4 py-10`). All content — title, metadata, cover, body — spans the full
+`PageContainer` width. Never hardcode `max-w-7xl` directly in a page — use the component.
 
 **Admin panel layout**: Left sidebar (Posts / Tags / Media / Log out) + content area. The
 `/mod/layout.tsx` conditionally renders: no token → narrow centered container (login page);

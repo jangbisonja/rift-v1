@@ -17,9 +17,13 @@ _(nothing in progress)_
 ## Upcoming
 
 - [x] **TipTap media integration** — Upload local files + pick from media library in editor toolbar. ✓
-- [ ] **Per-category page variations** — Events: date-grouped; Promos: promo code display; Articles: reading time; News: pinned posts. Container already uniform.
+- [x] **News cards — excerpt display on hero and row items** — `excerpt` added to `PostListItemSchema`; rendered below title+date in `PostHero` and `PostRowItem` with `…` suffix; empty string suppressed. ✓
+- [ ] **Promo code display** — Show `post_metadata.promo_code` on promo detail pages.
+- [x] **Post detail container** — Removed inner `max-w-3xl mx-auto` prose constraint; content now spans full `PageContainer` width. Cover image set to `h-[300px]` fixed height, center-cropped via `object-cover object-center`. ✓
 
 ## Done
+
+- [x] **Russian localization — public UI and date formatting** — nav labels, section headings, empty states, back-link labels, post type badges all in Russian; `formatDate()` utility in `src/lib/date.ts` (`ru-RU`, `Europe/Moscow`) used by all public date displays. ✓
 
 - [x] **Init Next.js 16** — TypeScript, Tailwind v4, App Router, src dir. Runs at localhost:3000. ✓
 - [x] **Read Next.js 16 breaking changes** — async APIs, `proxy.ts`, Turbopack default. Documented in CLAUDE.md. ✓

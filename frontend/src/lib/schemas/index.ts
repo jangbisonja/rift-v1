@@ -51,6 +51,7 @@ export const PostListItemSchema = z.object({
   status: PostStatus,
   title: z.string(),
   slug: z.string(),
+  excerpt: z.string(),
   created_at: z.string(),
   published_at: z.string().nullable(),
   tags: z.array(TagSchema),

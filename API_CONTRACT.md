@@ -29,12 +29,20 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
 **Two post response shapes:**
-- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, created_at, published_at, tags[], media[], cover_media`. No `content`, no `post_metadata`.
+- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media`. No `content`, no `post_metadata`.
+  - `excerpt: string` — first 10 words of plain text extracted from `content`, computed by the backend. Empty string if content is empty.
 - `PostRead` — returned by `GET /posts/{id}`: all of the above plus `content`, `post_metadata`, `updated_at`.
 
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
-**Post `post_metadata`** — arbitrary JSON; SEO fields + type-specific data (e.g. `promo_code` for `PROMO`)
+**Post `post_metadata`** — arbitrary JSON; SEO fields + type-specific data. Defined shapes per type:
+
+- `PROMO`:
+  ```json
+  { "promo_code": "SAVE20", "start_date": "2026-04-01", "end_date": "2026-04-30" }
+  ```
+  Dates are `YYYY-MM-DD`. All calculations use `Europe/Moscow` (UTC+3) timezone.
+  `days_remaining` is computed on the frontend: `end_date` (interpreted as end-of-day in Moscow time) minus current Moscow time, floored to 0.
 
 **Post `cover_media`** — `MediaRead | null`. The designated cover image for the post. Set via `cover_media_id` in create/update requests. Distinct from `media[]` (body media attached via the attach endpoint). TipTap-uploaded images must NOT be attached via the attach endpoint — they are unattached assets referenced only within `content` JSON.
 

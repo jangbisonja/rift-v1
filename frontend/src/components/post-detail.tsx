@@ -4,13 +4,21 @@ import { CoverImage } from "@/components/cover-image";
 import { RichTextContent } from "@/components/rich-text-content";
 import { PageContainer } from "@/components/page-container";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/date";
 import type { Post } from "@/lib/schemas";
 
 const BACK: Record<string, { href: string; label: string }> = {
-  NEWS:    { href: "/news",     label: "News" },
-  ARTICLE: { href: "/articles", label: "Articles" },
-  PROMO:   { href: "/promos",   label: "Promos" },
-  EVENT:   { href: "/events",   label: "Events" },
+  NEWS:    { href: "/news",     label: "Новости" },
+  ARTICLE: { href: "/articles", label: "Статьи" },
+  PROMO:   { href: "/promos",   label: "Акции" },
+  EVENT:   { href: "/events",   label: "События" },
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  NEWS:    "Новости",
+  ARTICLE: "Статьи",
+  PROMO:   "Акции",
+  EVENT:   "События",
 };
 
 interface PostDetailProps {
@@ -22,31 +30,33 @@ export function PostDetail({ post }: PostDetailProps) {
 
   return (
     <PageContainer>
-      {/* Content is narrowed for readability; outer container matches listing pages */}
-      <article className="mx-auto max-w-3xl">
+      <article>
         {back && (
           <Link
             href={back.href}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
           >
             <ArrowLeft className="size-3.5" />
-            Back to {back.label}
+            {back.label}
           </Link>
         )}
         <header className="mb-8 space-y-4">
           {post.cover_media && (
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
-              <CoverImage cover={post.cover_media} alt={post.title} fill />
+            <div className="relative h-[300px] w-full overflow-hidden rounded-xl bg-muted">
+              <CoverImage
+                cover={post.cover_media}
+                alt={post.title}
+                fill
+                className="object-cover object-center"
+              />
             </div>
           )}
           <div className="space-y-2">
-            <Badge variant="secondary">{post.type}</Badge>
+            <Badge variant="secondary">{TYPE_LABEL[post.type] ?? post.type}</Badge>
             <h1 className="text-4xl font-bold leading-tight">{post.title}</h1>
             {post.published_at && (
               <p className="text-sm text-muted-foreground">
-                {new Date(post.published_at).toLocaleDateString("en-US", {
-                  year: "numeric", month: "long", day: "numeric",
-                })}
+                {formatDate(post.published_at)}
               </p>
             )}
             {post.tags.length > 0 && (

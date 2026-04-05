@@ -14,9 +14,9 @@ export default async function PromosPage() {
 
   return (
     <PageContainer>
-      <h1 className="mb-8 text-3xl font-bold">Promotions</h1>
+      <h1 className="mb-8 text-3xl font-bold">Акции</h1>
       {posts.length === 0 ? (
-        <p className="text-muted-foreground">No active promotions.</p>
+        <p className="text-muted-foreground">Активных акций нет.</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((p) => (
