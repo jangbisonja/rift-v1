@@ -34,7 +34,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 **Purpose**: Core content management — create, read, update, publish, and delete content items.
 
 **Endpoints**:
-- `GET /posts` — list posts, filterable by `type`/`status`/`slug`, paginated (public)
+- `GET /posts` — list posts, filterable by `type`/`status`/`slug`, paginated; `?visibility=public|all` (default `all`) applies expiry filter when `public` (public)
 - `GET /posts/{id}` — single post (public)
 - `POST /posts` — create (superuser)
 - `PUT /posts/{id}` — full update (superuser)
@@ -45,14 +45,16 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Key files**:
 - `constants.py` — `PostType` enum: `NEWS`, `ARTICLE`, `PROMO`, `EVENT`; `PostStatus` enum: `DRAFT`, `PUBLISHED`, `ARCHIVE`
-- `models.py` — `Post` (UUID PK, type, status, title, slug, JSON content, JSON metadata, timestamps, `cover_media_id` FK); `post_tag` M2M table
-- `schemas.py` — `PostCreate`, `PostUpdate`, `PostRead` (full), `PostListItem` (lightweight list shape; includes computed `excerpt` field)
-- `service.py` — CRUD + `publish()`, `unpublish()`, `archive()`; slug uniqueness enforced here; `extract_excerpt(content, word_limit=10)` pure utility (no DB access)
+- `models.py` — `Post` (UUID PK, type, status, title, slug, JSON content, JSON metadata, timestamps, `cover_media_id` FK, `start_date` TIMESTAMPTZ nullable, `end_date` TIMESTAMPTZ nullable, `promo_code` VARCHAR(100) nullable always-uppercase); `post_tag` M2M table
+- `schemas.py` — `PostCreate`, `PostUpdate`, `PostRead` (full), `PostListItem` (lightweight list shape; includes computed `excerpt` field); all four schemas carry `start_date`, `end_date`, `promo_code`
+- `service.py` — CRUD + `publish()`, `unpublish()`, `archive()`; slug uniqueness enforced here; `extract_excerpt(content, word_limit=10)` pure utility (no DB access); `promo_code` forced uppercase on create and update; `get_all()` accepts `visibility` param — when `"public"` applies `EXPIRY_GRACE_DAYS`-based expiry filter
 - `dependencies.py` — `valid_post_id`: resolves post by UUID, raises `PostNotFound` if missing
 
 **Design decisions**:
 - **`content` as JSON (TipTap format)**: schema-agnostic to editor version changes; frontend handles rendering
-- **`post_metadata` as JSON**: SEO fields + type-specific data (e.g. `promo_code` for PROMO) live here — avoids nullable columns per content type
+- **`post_metadata` as JSON**: SEO fields only — arbitrary JSON. Type-specific data (`promo_code`, `start_date`, `end_date`) are dedicated nullable columns, not stored here.
+- **Typed nullable columns (`start_date`, `end_date`, `promo_code`)**: promoted from `post_metadata` to top-level columns to enable server-side filtering (expiry) and enforce invariants (uppercase `promo_code`) without parsing arbitrary JSON.
+- **`EXPIRY_GRACE_DAYS` config (`src/config.py`, default 7)**: number of days past `end_date` that items remain visible on public-facing pages. Applied only when `?visibility=public` is sent to `GET /posts`.
 - **Separate `PostListItem` schema**: list endpoints omit `content` and `post_metadata` to reduce payload size; `excerpt` is computed at serialization time via a Pydantic `model_validator(mode="before")` that reads `content` off the ORM object without exposing it as an output field
 - **`excerpt` computed in schema validator, not service**: the list query returns ORM objects directly; injecting excerpt in a `mode="before"` validator keeps the router unchanged and avoids a second pass over the result set
 - **`publish()` as a dedicated service method**: explicit business operation with its own timestamp (`published_at`), making the publish event auditable and distinguishable from a plain update

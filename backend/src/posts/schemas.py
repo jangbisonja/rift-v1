@@ -15,6 +15,9 @@ class PostCreate(BaseModel):
     post_metadata: dict[str, Any] = Field(default_factory=dict)
     tag_ids: list[uuid.UUID] = Field(default_factory=list)
     cover_media_id: uuid.UUID | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    promo_code: str | None = None
 
 
 class PostUpdate(BaseModel):
@@ -23,6 +26,9 @@ class PostUpdate(BaseModel):
     post_metadata: dict[str, Any] | None = None
     tag_ids: list[uuid.UUID] | None = None
     cover_media_id: uuid.UUID | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    promo_code: str | None = None
 
 
 class MediaRead(BaseModel):
@@ -46,6 +52,9 @@ class PostRead(BaseModel):
     created_at: datetime
     updated_at: datetime | None
     published_at: datetime | None
+    start_date: datetime | None
+    end_date: datetime | None
+    promo_code: str | None
     tags: list[TagRead]
     media: list[MediaRead]
     cover_media: MediaRead | None
@@ -62,6 +71,9 @@ class PostListItem(BaseModel):
     excerpt: str
     created_at: datetime
     published_at: datetime | None
+    start_date: datetime | None
+    end_date: datetime | None
+    promo_code: str | None
     tags: list[TagRead]
     media: list[MediaRead]
     cover_media: MediaRead | None
@@ -95,6 +107,9 @@ class PostListItem(BaseModel):
             "excerpt": extract_excerpt(getattr(data, "content", None)),
             "created_at": data.created_at,
             "published_at": data.published_at,
+            "start_date": data.start_date,
+            "end_date": data.end_date,
+            "promo_code": data.promo_code,
             "tags": data.tags,
             "media": data.media,
             "cover_media": data.cover_media,

@@ -29,20 +29,25 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
 **Two post response shapes:**
-- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media`. No `content`, no `post_metadata`.
+- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media, start_date, end_date, promo_code`. No `content`, no `post_metadata`.
   - `excerpt: string` — first 10 words of plain text extracted from `content`, computed by the backend. Empty string if content is empty.
+  - `start_date: string | null` — ISO 8601 datetime with UTC offset (e.g. `"2026-04-01T00:00:00+03:00"`). Null if not set.
+  - `end_date: string | null` — same format. Null if not set (item is indefinite/ongoing).
+  - `promo_code: string | null` — always uppercase. Null for non-PROMO types.
 - `PostRead` — returned by `GET /posts/{id}`: all of the above plus `content`, `post_metadata`, `updated_at`.
 
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
-**Post `post_metadata`** — arbitrary JSON; SEO fields + type-specific data. Defined shapes per type:
+**Post `post_metadata`** — arbitrary JSON; SEO fields only. Type-specific data (`promo_code`, `start_date`, `end_date`) has moved to dedicated top-level columns — do not put them in `post_metadata`.
 
-- `PROMO`:
-  ```json
-  { "promo_code": "SAVE20", "start_date": "2026-04-01", "end_date": "2026-04-30" }
-  ```
-  Dates are `YYYY-MM-DD`. All calculations use `Europe/Moscow` (UTC+3) timezone.
-  `days_remaining` is computed on the frontend: `end_date` (interpreted as end-of-day in Moscow time) minus current Moscow time, floored to 0.
+**Typed post fields** (`start_date`, `end_date`, `promo_code`) — stored as dedicated nullable columns on the `post` table (not in `post_metadata` JSON):
+- `start_date` / `end_date`: `TIMESTAMPTZ` in PostgreSQL. Returned as ISO 8601 with UTC offset. Used by PROMO and EVENT types. Null means not set.
+- `promo_code`: `VARCHAR`, always stored uppercase (enforced server-side). Used by PROMO type only. Null for all other types.
+- `days_remaining` is computed on the frontend: `end_date` (in Moscow time) minus now (in Moscow time), floored to 0. Display as "Осталось N дней" / "Истёк" when 0.
+
+**Expiry visibility** — controlled server-side via `EXPIRY_GRACE_DAYS` env var (integer, default 7).
+- Homepage (`visibility=public`): returns items where `end_date IS NULL OR end_date > now() - INTERVAL '{EXPIRY_GRACE_DAYS} days'`
+- Category/admin pages (`visibility=all`, default): no expiry filter applied.
 
 **Post `cover_media`** — `MediaRead | null`. The designated cover image for the post. Set via `cover_media_id` in create/update requests. Distinct from `media[]` (body media attached via the attach endpoint). TipTap-uploaded images must NOT be attached via the attach endpoint — they are unattached assets referenced only within `content` JSON.
 
@@ -61,7 +66,7 @@ The standalone `GET /media` endpoint returns a fuller shape that also includes `
 | POST | `/auth/login` | public | Get JWT token |
 | GET | `/users/me` | user | Current user profile |
 | PATCH | `/users/me` | user | Update current user (provided by fastapi-users; not used by frontend admin panel) |
-| GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`) → `PostListItem[]` |
+| GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`, `?visibility=public\|all`) → `PostListItem[]` |
 | GET | `/posts/{id}` | public | Single post → `PostRead` (includes content) |
 | POST | `/posts` | superuser | Create post |
 | PUT | `/posts/{id}` | superuser | Full update |

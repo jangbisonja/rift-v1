@@ -94,6 +94,7 @@ export interface ListPostsParams {
   slug?: string;
   limit?: number;
   offset?: number;
+  visibility?: "public" | "all";
 }
 
 export async function listPosts(
@@ -106,6 +107,7 @@ export async function listPosts(
   if (params.slug) qs.set("slug", params.slug);
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.offset != null) qs.set("offset", String(params.offset));
+  if (params.visibility) qs.set("visibility", params.visibility);
   const query = qs.toString() ? `?${qs}` : "";
   return request<PostListItem[]>(`/posts${query}`, {}, options);
 }

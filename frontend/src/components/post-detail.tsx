@@ -10,14 +10,14 @@ import type { Post } from "@/lib/schemas";
 const BACK: Record<string, { href: string; label: string }> = {
   NEWS:    { href: "/news",     label: "Новости" },
   ARTICLE: { href: "/articles", label: "Статьи" },
-  PROMO:   { href: "/promos",   label: "Акции" },
+  PROMO:   { href: "/promos",   label: "Промокоды" },
   EVENT:   { href: "/events",   label: "События" },
 };
 
 const TYPE_LABEL: Record<string, string> = {
   NEWS:    "Новости",
   ARTICLE: "Статьи",
-  PROMO:   "Акции",
+  PROMO:   "Промокоды",
   EVENT:   "События",
 };
 

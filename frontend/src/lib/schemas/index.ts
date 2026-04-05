@@ -57,6 +57,9 @@ export const PostListItemSchema = z.object({
   tags: z.array(TagSchema),
   media: z.array(MediaReadSchema),
   cover_media: MediaReadSchema.nullable(),
+  start_date: z.string().nullable(),
+  end_date: z.string().nullable(),
+  promo_code: z.string().nullable(),
 });
 export type PostListItem = z.infer<typeof PostListItemSchema>;
 
@@ -77,6 +80,9 @@ export const PostSchema = z.object({
   tags: z.array(TagSchema),
   media: z.array(MediaReadSchema),
   cover_media: MediaReadSchema.nullable(),
+  start_date: z.string().nullable(),
+  end_date: z.string().nullable(),
+  promo_code: z.string().nullable(),
 });
 export type Post = z.infer<typeof PostSchema>;
 

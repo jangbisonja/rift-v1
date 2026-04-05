@@ -5,7 +5,7 @@ const LINKS = [
   { href: "/news", label: "Новости" },
   { href: "/articles", label: "Статьи" },
   { href: "/events", label: "События" },
-  { href: "/promos", label: "Акции" },
+  { href: "/promos", label: "Промокоды" },
 ];
 
 export function Nav() {

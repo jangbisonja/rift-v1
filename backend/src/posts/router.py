@@ -19,9 +19,18 @@ async def list_posts(
     slug: str | None = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    visibility: str = Query("all", pattern="^(public|all)$"),
     session: AsyncSession = Depends(get_db),
 ):
-    return await service.get_all(session, post_type=post_type, status=post_status, slug=slug, limit=limit, offset=offset)
+    return await service.get_all(
+        session,
+        post_type=post_type,
+        status=post_status,
+        slug=slug,
+        limit=limit,
+        offset=offset,
+        visibility=visibility,
+    )
 
 
 @router.get("/{post_id}", response_model=PostRead)

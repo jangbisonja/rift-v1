@@ -8,9 +8,9 @@ import { PageContainer } from "@/components/page-container";
 
 export const revalidate = 60;
 
-async function fetch(type: string, limit = 20): Promise<PostListItem[]> {
+async function fetchPosts(type: string, limit = 20, visibility?: "public" | "all"): Promise<PostListItem[]> {
   try {
-    return await listPosts({ post_type: type, post_status: "PUBLISHED", limit });
+    return await listPosts({ post_type: type, post_status: "PUBLISHED", limit, visibility });
   } catch {
     return [];
   }
@@ -18,10 +18,10 @@ async function fetch(type: string, limit = 20): Promise<PostListItem[]> {
 
 export default async function HomePage() {
   const [news, articles, events, promos] = await Promise.all([
-    fetch("NEWS", 4),
-    fetch("ARTICLE", 4),
-    fetch("EVENT", 4),
-    fetch("PROMO"),
+    fetchPosts("NEWS", 4),
+    fetchPosts("ARTICLE", 4),
+    fetchPosts("EVENT", 4),
+    fetchPosts("PROMO", 20, "public"),
   ]);
 
   const [newsHero, ...newsRest] = news;
@@ -52,7 +52,7 @@ export default async function HomePage() {
             {/* Promos column */}
             {promos.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Акции</h2>
+                <h2 className="text-2xl font-bold">Промокоды</h2>
                 <div className="space-y-3">
                   {promos.map((p) => (
                     <PromoItem key={p.id} post={p} />

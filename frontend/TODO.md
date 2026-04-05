@@ -18,7 +18,7 @@ _(nothing in progress)_
 
 - [x] **TipTap media integration** — Upload local files + pick from media library in editor toolbar. ✓
 - [x] **News cards — excerpt display on hero and row items** — `excerpt` added to `PostListItemSchema`; rendered below title+date in `PostHero` and `PostRowItem` with `…` suffix; empty string suppressed. ✓
-- [ ] **Promo code display** — Show `post_metadata.promo_code` on promo detail pages.
+- [x] **Typed promo fields** — `start_date`, `end_date`, `promo_code` added to `PostListItemSchema` and `PostSchema`; `listPosts()` accepts `visibility` param; `promo-item.tsx` redesigned with copy-to-clipboard, days-remaining logic, and "Промокоды" label rename. ✓
 - [x] **Post detail container** — Removed inner `max-w-3xl mx-auto` prose constraint; content now spans full `PageContainer` width. Cover image set to `h-[300px]` fixed height, center-cropped via `object-cover object-center`. ✓
 
 ## Done

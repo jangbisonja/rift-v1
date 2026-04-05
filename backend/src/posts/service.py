@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from slugify import slugify
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.posts.constants import PostStatus
 from src.posts.exceptions import PostNotFound, SlugAlreadyExists
 from src.posts.models import Post
@@ -29,9 +30,9 @@ def extract_excerpt(content: dict[str, Any] | None, word_limit: int = 10) -> str
         if not isinstance(node, dict):
             return
         if node.get("type") == "text":
-            text = node.get("text", "")
-            if isinstance(text, str):
-                words.extend(text.split())
+            node_text = node.get("text", "")
+            if isinstance(node_text, str):
+                words.extend(node_text.split())
         for child in node.get("content", []):
             _walk(child)
 
@@ -64,6 +65,7 @@ async def get_all(
     slug: str | None = None,
     limit: int = 20,
     offset: int = 0,
+    visibility: str = "all",
 ) -> list[Post]:
     query = select(Post).order_by(Post.created_at.desc()).limit(limit).offset(offset)
     if post_type:
@@ -72,6 +74,11 @@ async def get_all(
         query = query.where(Post.status == status)
     if slug:
         query = query.where(Post.slug == slug)
+    if visibility == "public":
+        grace_days = settings.EXPIRY_GRACE_DAYS
+        query = query.where(
+            text(f"post.end_date IS NULL OR post.end_date > now() - INTERVAL '{grace_days} days'")
+        )
     result = await session.execute(query)
     return list(result.scalars().all())
 
@@ -103,6 +110,9 @@ async def create(data: PostCreate, session: AsyncSession) -> Post:
         post_metadata=data.post_metadata,
         tags=tags,
         cover_media_id=data.cover_media_id,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        promo_code=data.promo_code.upper() if data.promo_code is not None else None,
     )
     session.add(post)
     await session.commit()
@@ -123,6 +133,12 @@ async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) ->
         post.tags = await _resolve_tags(data.tag_ids, session)
     if "cover_media_id" in data.model_fields_set:
         post.cover_media_id = data.cover_media_id
+    if data.start_date is not None:
+        post.start_date = data.start_date
+    if data.end_date is not None:
+        post.end_date = data.end_date
+    if data.promo_code is not None:
+        post.promo_code = data.promo_code.upper()
     await session.commit()
     await session.refresh(post)
     return post

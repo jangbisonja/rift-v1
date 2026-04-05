@@ -33,9 +33,10 @@ Same row item card as homepage. Paginated.
 Compact list — no cover image, even if one is uploaded.
 
 Each item shows:
-- Promo code string (`post_metadata.promo_code`) — prominent, monospaced
-- Start date (`post_metadata.start_date`) — formatted in Russian
-- Days remaining — computed: `end_date` (end-of-day Moscow time) minus now (Moscow time), floored to 0. Display as e.g. "Осталось 5 дней" / "Истёк" when 0.
+- Promo code string (`post.promo_code`) — prominent, monospaced, with copy-to-clipboard button
+- Post title
+- Start date (`post.start_date`) — formatted in Russian via `formatDate()`
+- Days remaining — computed from `post.end_date` (parsed as TIMESTAMPTZ, compared to now). Display as "Осталось N дней" / "Истекает сегодня" / "Истёк" / "Бессрочно" (when `end_date` is null).
 
 ### Promo archive page (`/promos`)
 Same compact card. Paginated.

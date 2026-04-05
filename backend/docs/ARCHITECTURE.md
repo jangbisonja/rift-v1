@@ -42,6 +42,7 @@ Single shared `async_sessionmaker` → per-request sessions via `get_db()` depen
 ```
 user        UUID PK  fastapi-users managed; superuser flag for admin
 post        UUID PK  type + status enums; JSON content + metadata; timestamps; nullable FK cover_media_id → media.id (SET NULL on delete)
+                     typed nullable columns: start_date (TIMESTAMPTZ), end_date (TIMESTAMPTZ), promo_code (VARCHAR 100, always uppercase)
 tag         UUID PK  unique name + unique slug
 post_tag             M2M join (post ↔ tag); CASCADE both sides
 media       UUID PK  nullable FK to post; SET NULL on post delete
@@ -89,7 +90,7 @@ Two `BaseSettings` classes, one `.env` file, both use `extra="ignore"`:
 
 | Class | File | Fields |
 |---|---|---|
-| `Config` | `src/config.py` | DB connection, `ENVIRONMENT`, admin credentials |
+| `Config` | `src/config.py` | DB connection, `ENVIRONMENT`, admin credentials, `EXPIRY_GRACE_DAYS` |
 | `AuthConfig` | `src/auth/config.py` | `JWT_SECRET`, `JWT_ALG`, `JWT_EXP` |
 
 ## Migrations

@@ -51,9 +51,10 @@ Each module: `router.py`, `schemas.py`, `models.py`, `service.py`,
 ## Data Models
 
 **Post** — `id` (UUID PK), `type` (PostType enum), `status` (PostStatus enum),
-`title`, `slug` (unique), `content` (JSON/TipTap), `post_metadata` (JSON/SEO),
+`title`, `slug` (unique), `content` (JSON/TipTap), `post_metadata` (JSON/SEO only),
 `created_at`, `updated_at`, `published_at`. M2M → `tags` via `post_tag`. O2M → `media`.
-FK → `cover_media_id` (nullable, `SET NULL on delete`) — see Cover Image task below.
+FK → `cover_media_id` (nullable, `SET NULL on delete`).
+Typed nullable columns: `start_date` (TIMESTAMPTZ), `end_date` (TIMESTAMPTZ), `promo_code` (VARCHAR 100, always stored uppercase, enforced in service layer). Used by PROMO and EVENT types. Do NOT store these in `post_metadata`.
 
 Response schemas and data shapes: see `../API_CONTRACT.md`.
 

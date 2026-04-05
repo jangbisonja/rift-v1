@@ -17,6 +17,8 @@ class Config(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    EXPIRY_GRACE_DAYS: int = 7
+
     @property
     def database_url(self) -> str:
         return (
