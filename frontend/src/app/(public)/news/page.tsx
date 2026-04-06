@@ -1,8 +1,8 @@
 import { listPosts } from "@/lib/api/client";
 import { postHref } from "@/lib/post-href";
-import { PostHero } from "@/components/post-hero";
 import { PostRowItem } from "@/components/post-row-item";
 import { PageContainer } from "@/components/page-container";
+import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 
 export const revalidate = 60;
 
@@ -14,21 +14,17 @@ export default async function NewsPage() {
     /* empty */
   }
 
-  const [hero, ...rest] = posts;
-
   return (
     <PageContainer>
+      <BreadcrumbNav items={[{ label: "Главная", href: "/" }, { label: "Новости" }]} />
       <h1 className="mb-8 text-3xl font-bold">Новости</h1>
       {posts.length === 0 ? (
         <p className="text-muted-foreground">Новостей пока нет.</p>
       ) : (
-        <div className="space-y-6">
-          {hero && <PostHero post={hero} href={postHref(hero.type, hero.slug)} />}
-          <div className="space-y-3">
-            {rest.map((p) => (
-              <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
-            ))}
-          </div>
+        <div className="space-y-3">
+          {posts.map((p) => (
+            <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
+          ))}
         </div>
       )}
     </PageContainer>

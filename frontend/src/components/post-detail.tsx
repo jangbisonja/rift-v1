@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { CoverImage } from "@/components/cover-image";
 import { RichTextContent } from "@/components/rich-text-content";
 import { PageContainer } from "@/components/page-container";
+import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/date";
+import { ExternalLink } from "lucide-react";
 import type { Post } from "@/lib/schemas";
 
 const BACK: Record<string, { href: string; label: string }> = {
@@ -31,18 +31,14 @@ export function PostDetail({ post }: PostDetailProps) {
   return (
     <PageContainer>
       <article>
-        {back && (
-          <Link
-            href={back.href}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-          >
-            <ArrowLeft className="size-3.5" />
-            {back.label}
-          </Link>
-        )}
+        <BreadcrumbNav items={[
+          { label: "Главная", href: "/" },
+          ...(back ? [{ label: back.label, href: back.href }] : []),
+          { label: post.title },
+        ]} />
         <header className="mb-8 space-y-4">
           {post.cover_media && (
-            <div className="relative h-[300px] w-full overflow-hidden rounded-xl bg-muted">
+            <div className="relative h-[300px] w-full overflow-hidden bg-muted">
               <CoverImage
                 cover={post.cover_media}
                 alt={post.title}
@@ -71,6 +67,19 @@ export function PostDetail({ post }: PostDetailProps) {
           </div>
         </header>
         <RichTextContent content={post.content} />
+        {post.external_link && (
+          <div className="mt-6">
+            <a
+              href={post.external_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-medium underline underline-offset-4"
+            >
+              Перейти к событию
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        )}
       </article>
     </PageContainer>
   );

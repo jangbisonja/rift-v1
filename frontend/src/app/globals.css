@@ -49,6 +49,19 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* =============================================================================
+ * Public type scale — apply consistently across all public pages/components:
+ *   Page h1:              text-3xl font-bold
+ *   Section h2 (hp):      text-2xl font-bold
+ *   Hero card title:      text-xl font-bold
+ *   Row/card title:       text-sm font-semibold
+ *   Post detail h1:       text-4xl font-bold
+ *   Body/excerpt:         text-sm
+ *   Metadata/date cards:  text-xs text-muted-foreground
+ *   Metadata/date detail: text-sm text-muted-foreground
+ *   Breadcrumb:           text-sm text-muted-foreground
+ * ============================================================================= */
+
 /* Light theme */
 :root {
   --background: oklch(0.97 0.004 280);
@@ -74,7 +87,7 @@
   --chart-3: oklch(0.72 0.10 310);
   --chart-4: oklch(0.60 0.09 200);
   --chart-5: oklch(0.50 0.13 300);
-  --radius: 0.625rem;
+  --radius: 0rem;
   --sidebar: oklch(0.94 0.006 280);
   --sidebar-foreground: oklch(0.18 0.01 280);
   --sidebar-primary: oklch(0.55 0.14 285);
@@ -130,4 +143,19 @@
   html {
     @apply font-sans;
   }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border);
 }

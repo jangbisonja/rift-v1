@@ -10,7 +10,7 @@ from src.tags.schemas import TagRead
 
 class PostCreate(BaseModel):
     type: PostType
-    title: str = Field(min_length=1, max_length=256)
+    title: str = Field(default="", max_length=256)
     content: dict[str, Any] = Field(default_factory=dict)
     post_metadata: dict[str, Any] = Field(default_factory=dict)
     tag_ids: list[uuid.UUID] = Field(default_factory=list)
@@ -18,10 +18,19 @@ class PostCreate(BaseModel):
     start_date: datetime | None = None
     end_date: datetime | None = None
     promo_code: str | None = None
+    external_link: str | None = None
+    redirect_to_external: bool = False
+
+    @model_validator(mode="after")
+    def _require_title_for_non_promo(self) -> "PostCreate":
+        if self.type != PostType.PROMO and not self.title:
+            raise ValueError("Title is required")
+        return self
 
 
 class PostUpdate(BaseModel):
-    title: str | None = Field(None, min_length=1, max_length=256)
+    # min_length intentionally omitted: PROMO updates send title="" (no title field)
+    title: str | None = Field(None, max_length=256)
     content: dict[str, Any] | None = None
     post_metadata: dict[str, Any] | None = None
     tag_ids: list[uuid.UUID] | None = None
@@ -29,6 +38,8 @@ class PostUpdate(BaseModel):
     start_date: datetime | None = None
     end_date: datetime | None = None
     promo_code: str | None = None
+    external_link: str | None = None
+    redirect_to_external: bool | None = None
 
 
 class MediaRead(BaseModel):
@@ -55,9 +66,48 @@ class PostRead(BaseModel):
     start_date: datetime | None
     end_date: datetime | None
     promo_code: str | None
+    external_link: str | None
+    redirect_to_external: bool
+    excerpt: str
     tags: list[TagRead]
     media: list[MediaRead]
     cover_media: MediaRead | None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _inject_excerpt(cls, data: Any) -> Any:
+        """Compute ``excerpt`` from TipTap ``content``, same logic as PostListItem."""
+        from src.posts.service import extract_excerpt  # noqa: PLC0415
+
+        if isinstance(data, dict):
+            if "excerpt" not in data:
+                data["excerpt"] = extract_excerpt(data.get("content"))
+            return data
+
+        # ORM instance path — copy all attributes and inject excerpt
+        content = getattr(data, "content", None)
+        obj_dict = {
+            "id": data.id,
+            "type": data.type,
+            "status": data.status,
+            "title": data.title,
+            "slug": data.slug,
+            "content": content,
+            "post_metadata": data.post_metadata,
+            "created_at": data.created_at,
+            "updated_at": data.updated_at,
+            "published_at": data.published_at,
+            "start_date": data.start_date,
+            "end_date": data.end_date,
+            "promo_code": data.promo_code,
+            "external_link": data.external_link,
+            "redirect_to_external": data.redirect_to_external,
+            "excerpt": extract_excerpt(content),
+            "tags": data.tags,
+            "media": data.media,
+            "cover_media": data.cover_media,
+        }
+        return obj_dict
 
 
 class PostListItem(BaseModel):
@@ -74,6 +124,8 @@ class PostListItem(BaseModel):
     start_date: datetime | None
     end_date: datetime | None
     promo_code: str | None
+    external_link: str | None
+    redirect_to_external: bool
     tags: list[TagRead]
     media: list[MediaRead]
     cover_media: MediaRead | None
@@ -110,6 +162,8 @@ class PostListItem(BaseModel):
             "start_date": data.start_date,
             "end_date": data.end_date,
             "promo_code": data.promo_code,
+            "external_link": data.external_link,
+            "redirect_to_external": data.redirect_to_external,
             "tags": data.tags,
             "media": data.media,
             "cover_media": data.cover_media,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useForm, Controller, type Resolver, type ControllerRenderProps } from "react-hook-form";
+import { useRef, useState, useEffect } from "react";
+import { useForm, useWatch, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PostCreateSchema, PostType, type PostCreate, type MediaRead } from "@/lib/schemas";
 import { RichEditor } from "@/components/editor/rich-editor";
@@ -44,6 +44,10 @@ export function PostForm({
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [displayCover, setDisplayCover] = useState<MediaRead | null>(initialCoverMedia ?? null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [noEndDate, setNoEndDate] = useState(() => {
+    const ed = defaultValues?.end_date;
+    return ed === null || ed === undefined;
+  });
 
   const {
     register,
@@ -61,9 +65,46 @@ export function PostForm({
       post_metadata: {},
       tag_ids: [],
       cover_media_id: initialCoverMedia?.id ?? null,
+      start_date: null,
+      end_date: null,
+      promo_code: null,
+      external_link: null,
+      redirect_to_external: false,
       ...defaultValues,
     },
   });
+
+  // useWatch (not watch) to avoid unnecessary re-renders on unrelated field changes.
+  const selectedType = useWatch({ control, name: "type" });
+
+  // Clear type-specific stale values when the user switches type, so fields from
+  // the previous type are never silently submitted with the new type's data.
+  const prevTypeRef = useRef(selectedType);
+  useEffect(() => {
+    const prev = prevTypeRef.current;
+    prevTypeRef.current = selectedType;
+    if (prev === selectedType) return;
+    if (prev === "PROMO") {
+      setValue("promo_code", null);
+    }
+    if (prev === "EVENT") {
+      setValue("external_link", null);
+      setValue("redirect_to_external", false);
+    }
+    if ((prev === "EVENT" || prev === "PROMO") && selectedType !== "EVENT" && selectedType !== "PROMO") {
+      setValue("start_date", null);
+      setValue("end_date", null);
+      setNoEndDate(true);
+    }
+  }, [selectedType, setValue]);
+
+  const showTitle = selectedType !== "PROMO";
+  const showCover = selectedType !== "PROMO" && !!onCoverUpload;
+  const showTags = selectedType === "NEWS";
+  const showContent = selectedType !== "PROMO";
+  const showDates = selectedType === "EVENT" || selectedType === "PROMO";
+  const showPromoCode = selectedType === "PROMO";
+  const showExternalLink = selectedType === "EVENT";
 
   async function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -86,20 +127,7 @@ export function PostForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Title */}
-      <div>
-        <label className="block text-sm font-medium mb-1.5">Title</label>
-        <input
-          {...register("title")}
-          placeholder="Post title"
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        {errors.title && (
-          <p className="text-destructive text-xs mt-1">{errors.title.message}</p>
-        )}
-      </div>
-
-      {/* Type */}
+      {/* Type — always first */}
       <div>
         <label className="block text-sm font-medium mb-1.5">Type</label>
         <select
@@ -114,46 +142,23 @@ export function PostForm({
         </select>
       </div>
 
-      {/* Tags */}
-      {tags.length > 0 && (
+      {/* Title */}
+      {showTitle && (
         <div>
-          <label className="block text-sm font-medium mb-2">Tags</label>
-          <Controller
-            name="tag_ids"
-            control={control}
-            render={({ field }) => (
-              <div className="flex flex-wrap gap-3">
-                {tags.map((tag) => {
-                  const checked = field.value.includes(tag.id);
-                  return (
-                    <label
-                      key={tag.id}
-                      className="flex items-center gap-1.5 text-sm cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            field.onChange([...field.value, tag.id]);
-                          } else {
-                            field.onChange(field.value.filter((id) => id !== tag.id));
-                          }
-                        }}
-                        className="rounded border border-input"
-                      />
-                      {tag.name}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
+          <label className="block text-sm font-medium mb-1.5">Title</label>
+          <input
+            {...register("title")}
+            placeholder="Post title"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          {errors.title && (
+            <p className="text-destructive text-xs mt-1">{errors.title.message}</p>
+          )}
         </div>
       )}
 
       {/* Cover Image */}
-      {onCoverUpload && (
+      {showCover && (
         <div>
           <label className="block text-sm font-medium mb-1.5">Cover image</label>
           {displayCover ? (
@@ -197,65 +202,141 @@ export function PostForm({
         </div>
       )}
 
-      {/* Content */}
-      <div>
-        <label className="block text-sm font-medium mb-1.5">Content</label>
-        <Controller
-          name="content"
-          control={control}
-          render={({ field }) => (
-            <RichEditor
-              value={field.value}
-              onChange={field.onChange}
-              onUploadImage={onEditorImageUpload}
-              mediaLibrary={mediaLibrary}
-            />
-          )}
-        />
-      </div>
-
-      {/* Metadata — collapsed by default */}
-      <details className="rounded-lg border">
-        <summary className="px-4 py-3 text-sm font-medium cursor-pointer select-none list-none flex items-center gap-2">
-          <span className="text-muted-foreground">▸</span> Metadata (JSON)
-        </summary>
-        <div className="px-4 pb-4 border-t">
+      {/* Tags — NEWS only */}
+      {showTags && tags.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium mb-2">Tags</label>
           <Controller
-            name="post_metadata"
+            name="tag_ids"
             control={control}
-            render={({ field }) => <MetadataTextarea field={field} />}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-3">
+                {tags.map((tag) => {
+                  const checked = field.value.includes(tag.id);
+                  return (
+                    <label
+                      key={tag.id}
+                      className="flex items-center gap-1.5 text-sm cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            field.onChange([...field.value, tag.id]);
+                          } else {
+                            field.onChange(field.value.filter((id) => id !== tag.id));
+                          }
+                        }}
+                        className="rounded border border-input"
+                      />
+                      {tag.name}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           />
         </div>
-      </details>
+      )}
+
+      {/* Content (TipTap) */}
+      {showContent && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Content</label>
+          <Controller
+            name="content"
+            control={control}
+            render={({ field }) => (
+              <RichEditor
+                value={field.value}
+                onChange={field.onChange}
+                onUploadImage={onEditorImageUpload}
+                mediaLibrary={mediaLibrary}
+              />
+            )}
+          />
+        </div>
+      )}
+
+      {/* Start / End Date — EVENT and PROMO */}
+      {showDates && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Start date</label>
+            <input
+              type="datetime-local"
+              {...register("start_date")}
+              className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">End date</label>
+            <div className="space-y-2">
+              {!noEndDate && (
+                <input
+                  type="datetime-local"
+                  {...register("end_date")}
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              )}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={noEndDate}
+                  onChange={(e) => {
+                    setNoEndDate(e.target.checked);
+                    if (e.target.checked) {
+                      setValue("end_date", null);
+                    }
+                  }}
+                  className="rounded border border-input"
+                />
+                No end date
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Promo Code — PROMO only */}
+      {showPromoCode && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Promo code</label>
+          <input
+            {...register("promo_code")}
+            placeholder="e.g. SUMMER25"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      )}
+
+      {/* External link — EVENT only */}
+      {showExternalLink && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">External link</label>
+            <input
+              type="url"
+              {...register("external_link")}
+              placeholder="https://..."
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              {...register("redirect_to_external")}
+              className="rounded border border-input"
+            />
+            Redirect cards directly to external link (skip internal page)
+          </label>
+        </div>
+      )}
 
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Saving…" : submitLabel}
       </Button>
     </form>
-  );
-}
-
-function MetadataTextarea({
-  field,
-}: {
-  field: ControllerRenderProps<PostCreate, "post_metadata">;
-}) {
-  const [raw, setRaw] = useState(() => JSON.stringify(field.value, null, 2));
-
-  return (
-    <textarea
-      value={raw}
-      onChange={(e) => {
-        setRaw(e.target.value);
-        try {
-          field.onChange(JSON.parse(e.target.value));
-        } catch {
-          // keep last valid value until JSON is fixed
-        }
-      }}
-      rows={6}
-      spellCheck={false}
-      className="mt-3 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring"
-    />
   );
 }

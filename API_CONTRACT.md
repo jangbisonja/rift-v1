@@ -29,20 +29,24 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 
 **Two post response shapes:**
-- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media, start_date, end_date, promo_code`. No `content`, no `post_metadata`.
+- `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media, start_date, end_date, promo_code, external_link, redirect_to_external`. No `content`, no `post_metadata`.
   - `excerpt: string` — first 10 words of plain text extracted from `content`, computed by the backend. Empty string if content is empty.
   - `start_date: string | null` — ISO 8601 datetime with UTC offset (e.g. `"2026-04-01T00:00:00+03:00"`). Null if not set.
   - `end_date: string | null` — same format. Null if not set (item is indefinite/ongoing).
   - `promo_code: string | null` — always uppercase. Null for non-PROMO types.
+  - `external_link: string | null` — external URL. Used by EVENT type. Null if not set.
+  - `redirect_to_external: boolean` — if `true`, archive cards should link directly to `external_link` (new tab) instead of the internal post page. EVENT-specific; always `false` for other types.
 - `PostRead` — returned by `GET /posts/{id}`: all of the above plus `content`, `post_metadata`, `updated_at`.
 
 **Post `content`** — TipTap JSON: `{ "type": "doc", "content": [...] }`
 
 **Post `post_metadata`** — arbitrary JSON; SEO fields only. Type-specific data (`promo_code`, `start_date`, `end_date`) has moved to dedicated top-level columns — do not put them in `post_metadata`.
 
-**Typed post fields** (`start_date`, `end_date`, `promo_code`) — stored as dedicated nullable columns on the `post` table (not in `post_metadata` JSON):
+**Typed post fields** — stored as dedicated nullable columns on the `post` table (not in `post_metadata` JSON):
 - `start_date` / `end_date`: `TIMESTAMPTZ` in PostgreSQL. Returned as ISO 8601 with UTC offset. Used by PROMO and EVENT types. Null means not set.
 - `promo_code`: `VARCHAR`, always stored uppercase (enforced server-side). Used by PROMO type only. Null for all other types.
+- `external_link`: `VARCHAR`, nullable. Used by EVENT type. Stored as-is (no normalization). Null if not set.
+- `redirect_to_external`: `BOOLEAN`, not null, default `false`. EVENT-specific. When `true`, archive cards link directly to `external_link` (new tab) instead of the internal post page. The internal detail page always remains accessible via its slug URL.
 - `days_remaining` is computed on the frontend: `end_date` (in Moscow time) minus now (in Moscow time), floored to 0. Display as "Осталось N дней" / "Истёк" when 0.
 
 **Expiry visibility** — controlled server-side via `EXPIRY_GRACE_DAYS` env var (integer, default 7).

@@ -60,6 +60,8 @@ export const PostListItemSchema = z.object({
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
   promo_code: z.string().nullable(),
+  external_link: z.string().nullable(),
+  redirect_to_external: z.boolean(),
 });
 export type PostListItem = z.infer<typeof PostListItemSchema>;
 
@@ -83,6 +85,8 @@ export const PostSchema = z.object({
   start_date: z.string().nullable(),
   end_date: z.string().nullable(),
   promo_code: z.string().nullable(),
+  external_link: z.string().nullable(),
+  redirect_to_external: z.boolean(),
 });
 export type Post = z.infer<typeof PostSchema>;
 
@@ -90,11 +94,25 @@ export type Post = z.infer<typeof PostSchema>;
 
 export const PostCreateSchema = z.object({
   type: PostType,
-  title: z.string().min(1, "Title is required").max(256),
+  // PROMO posts have no title — allow empty; non-PROMO validated below
+  title: z.string().max(256).default(""),
   content: z.record(z.string(), z.unknown()).default({ type: "doc", content: [] }),
   post_metadata: z.record(z.string(), z.unknown()).default({}),
   tag_ids: z.array(z.string().uuid()).default([]),
   cover_media_id: z.string().uuid().nullable().default(null),
+  start_date: z.string().nullable().default(null),
+  end_date: z.string().nullable().default(null),
+  promo_code: z.string().nullable().default(null),
+  external_link: z.string().nullable().default(null),
+  redirect_to_external: z.boolean().default(false),
+}).superRefine((data, ctx) => {
+  if (data.type !== "PROMO" && !data.title) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Title is required",
+      path: ["title"],
+    });
+  }
 });
 export type PostCreate = z.infer<typeof PostCreateSchema>;
 

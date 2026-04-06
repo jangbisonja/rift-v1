@@ -116,6 +116,11 @@ export default function EditPostPage() {
     post_metadata: post.post_metadata,
     tag_ids: post.tags.map((t) => t.id),
     cover_media_id: post.cover_media?.id ?? null,
+    start_date: post.start_date ?? null,
+    end_date: post.end_date ?? null,
+    promo_code: post.promo_code ?? null,
+    external_link: post.external_link ?? null,
+    redirect_to_external: post.redirect_to_external ?? false,
   };
 
   return (

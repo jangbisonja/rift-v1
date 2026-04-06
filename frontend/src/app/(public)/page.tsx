@@ -3,8 +3,10 @@ import { postHref } from "@/lib/post-href";
 import { PostHero } from "@/components/post-hero";
 import { PostRowItem } from "@/components/post-row-item";
 import { PromoItem } from "@/components/promo-item";
+import { Timeline } from "@/components/timeline";
 import type { PostListItem } from "@/lib/schemas";
 import { PageContainer } from "@/components/page-container";
+import { getMoscowTodayStr } from "@/lib/date";
 
 export const revalidate = 60;
 
@@ -20,12 +22,21 @@ export default async function HomePage() {
   const [news, articles, events, promos] = await Promise.all([
     fetchPosts("NEWS", 4),
     fetchPosts("ARTICLE", 4),
-    fetchPosts("EVENT", 4),
+    fetchPosts("EVENT", 100, "public"),
     fetchPosts("PROMO", 20, "public"),
   ]);
 
   const [newsHero, ...newsRest] = news;
   const articlePairs = [articles.slice(0, 2), articles.slice(2, 4)].filter((g) => g.length > 0);
+
+  const sortedEvents = [...events].sort((a, b) => {
+    if (!a.start_date && !b.start_date) return 0;
+    if (!a.start_date) return -1;
+    if (!b.start_date) return 1;
+    return a.start_date.localeCompare(b.start_date);
+  });
+
+  const todayStr = getMoscowTodayStr();
 
   return (
     <PageContainer className="space-y-14">
@@ -65,16 +76,10 @@ export default async function HomePage() {
       )}
 
       {/* ── Events ────────────────────────────────────────────────────────── */}
-      {events.length > 0 && (
-        <section>
-          <h2 className="mb-4 text-2xl font-bold">События</h2>
-          <div className="space-y-3">
-            {events.map((p) => (
-              <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
-            ))}
-          </div>
-        </section>
-      )}
+      <section>
+        <h2 className="mb-4 text-2xl font-bold">События</h2>
+        <Timeline events={sortedEvents} today={todayStr} />
+      </section>
 
       {/* ── Articles ──────────────────────────────────────────────────────── */}
       {articles.length > 0 && (

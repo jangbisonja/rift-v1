@@ -10,6 +10,7 @@ import {
   deletePost,
 } from "@/lib/api/client";
 import { useToken } from "@/components/mod/token-context";
+import { useToast } from "@/components/toast-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ const STATUS_VARIANT: Record<
 export default function PostsPage() {
   const token = useToken();
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [page, setPage] = useState(0);
   const [confirm, setConfirm] = useState<{ id: string; title: string } | null>(null);
 
@@ -45,16 +47,19 @@ export default function PostsPage() {
   const publishMut = useMutation({
     mutationFn: (id: string) => publishPost(id, token),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
+    onError: () => toast("Failed to publish. Please try again.", "error"),
   });
 
   const unpublishMut = useMutation({
     mutationFn: (id: string) => unpublishPost(id, token),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
+    onError: () => toast("Failed to unpublish. Please try again.", "error"),
   });
 
   const archiveMut = useMutation({
     mutationFn: (id: string) => archivePost(id, token),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["posts"] }),
+    onError: () => toast("Failed to archive. Please try again.", "error"),
   });
 
   const deleteMut = useMutation({
@@ -63,6 +68,7 @@ export default function PostsPage() {
       qc.invalidateQueries({ queryKey: ["posts"] });
       setConfirm(null);
     },
+    onError: () => toast("Failed to delete. Please try again.", "error"),
   });
 
   if (isLoading) {
@@ -144,7 +150,9 @@ export default function PostsPage() {
                 {posts.map((post) => (
                   <tr key={post.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3">
-                      <span className="font-medium">{post.title}</span>
+                      <span className="font-medium">
+                        {post.title || (post.promo_code ?? <span className="italic text-muted-foreground">Untitled</span>)}
+                      </span>
                       {post.tags.length > 0 && (
                         <span className="ml-2 text-xs text-muted-foreground">
                           {post.tags.map((t) => t.name).join(", ")}

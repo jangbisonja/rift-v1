@@ -11,7 +11,7 @@ interface PostHeroProps {
 export function PostHero({ post, href }: PostHeroProps) {
   return (
     <Link href={href} className="group block focus:outline-none">
-      <article className="overflow-hidden rounded-xl border bg-card transition-shadow group-hover:shadow-lg group-focus-visible:ring-2 group-focus-visible:ring-ring">
+      <article className="overflow-hidden border bg-card transition-shadow group-hover:shadow-lg group-focus-visible:ring-2 group-focus-visible:ring-ring">
         <div className="relative aspect-[3/1] w-full overflow-hidden bg-muted">
           <CoverImage cover={post.cover_media} alt={post.title} fill className="transition-transform group-hover:scale-[1.02]" />
         </div>

@@ -266,6 +266,12 @@ create/update requests. `post.media[]` is the gallery (items attached via the at
 used by the editor library picker). TipTap body images are uploaded and inserted by URL only —
 they must NOT be attached via the attach endpoint. `CoverImage` component accepts `cover: MediaRead | null`.
 
+**Scrollbar customization pattern**
+Use the `.scrollbar-thin` utility class defined in `globals.css`. It sets `scrollbar-width: thin` + `scrollbar-color` (standard spec) and `::-webkit-scrollbar` rules (WebKit). Both use `var(--color-border)` so the scrollbar adapts to dark/light theme automatically. Apply to any `overflow-x-auto` or `overflow-y-auto` container that needs a subtle scrollbar.
+
+**Today indicator in Timeline — `top: 0; bottom: 0` stretch trick**
+An absolutely-positioned `flex-col` div with `top: 0; bottom: 0` correctly stretches to the parent's full content height even when the parent is `height: auto`, as long as the parent is `position: relative` (establishing the containing block). The downward triangle uses the CSS border trick (`borderLeft/Right: transparent`, `borderTop: solid`) — no icon library needed.
+
 **Cover image is saved atomically with the post form**
 `PostForm` manages the cover via `initialCoverMedia` prop (display) + `onCoverUpload` prop
 (upload callback returning `MediaRead`). `cover_media_id` is a hidden form field — on submit,
@@ -278,6 +284,26 @@ Upload/attach logic lives in the page, not the editor. Body images: upload only,
 Gallery images: upload + attach via `POST /media/{id}/attach/{post_id}` — available in picker.
 `MediaPickerModal` (`src/components/mod/media-picker-modal.tsx`) shows the gallery grid.
 If `mediaLibrary` prop is absent, the editor hides the picker button.
+
+**Admin post form — conditional field visibility by type**
+The Type selector is always first. All other fields are conditionally rendered based on
+the selected type (watched via `useWatch`). Field visibility matrix:
+
+| Field            | NEWS | ARTICLE | EVENT | PROMO |
+|------------------|------|---------|-------|-------|
+| Title            | ✓    | ✓       | ✓     | —     |
+| Cover Image      | ✓    | ✓       | ✓     | —     |
+| Tags             | ✓    | —       | —     | —     |
+| Content (TipTap) | ✓    | ✓       | ✓     | —     |
+| Start / End Date | —    | —       | ✓     | ✓     |
+| Promo Code       | —    | —       | —     | ✓     |
+| Metadata (JSON)  | —    | —       | ✓     | —     |
+
+`promo_code` is a dedicated top-level column — rendered as a labeled text input for PROMO,
+never stored in `post_metadata`. For EVENT, `post_metadata.external_link` is exposed as a
+dedicated URL input (not a raw JSON editor). Future public-side logic: if `external_link` is
+set and a checkbox is checked, the post link redirects to the external URL instead of the
+detail page. Start/End dates use `datetime-local` inputs; null = not set (indefinite).
 
 ## TODO.md
 

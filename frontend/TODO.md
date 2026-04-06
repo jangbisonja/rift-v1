@@ -4,7 +4,18 @@
 
 _(nothing in progress)_
 
+## Recently Completed
+
+- [x] **PromoItem unified layout — remove `compact` prop** — Collapsed both layout branches into one. Single `<article className="flex flex-col gap-2 border bg-card p-3">` with centered promo code (three-column flex spacer) + right-aligned copy button (Row 1), and start date left / DaysLabel right (Row 2). Copy confirmation changed from text span to `<Check size={14} className="text-green-500" />`. `compact` prop removed from component and homepage call site. ✓
+
 ## Up Next
+
+- [x] **Border radius = 0 (site-wide)** — `--radius: 0rem` in `:root`; all `rounded-*` classes removed from public components (`post-hero`, `post-row-item`, `promo-item`, `post-detail`). Admin components untouched. Type scale documented in `globals.css`. ✓
+- [x] **Public breadcrumb component** — `src/components/breadcrumb-nav.tsx`; added to all 4 archive pages (news/articles/events/promos) and replaced back-arrow link in `post-detail.tsx` with full `Home / Category / Title` trail. ✓
+- [x] **News archive: uniform cards (no hero)** — Removed `PostHero` from `news/page.tsx`; all posts now rendered as `PostRowItem`. `PostHero` import removed. ✓
+- [x] **Typography audit** — All public pages/components confirmed consistent: `text-3xl font-bold` (page h1), `text-2xl font-bold` (section h2), `text-xl font-bold` (hero card), `text-sm font-semibold` (row card), `text-4xl font-bold` (detail h1). Type scale comment added to `globals.css`. ✓
+
+## Previously Completed
 
 - [x] **Pagination** — posts list: prev/next with limit/offset, Next disabled when fewer than PAGE_SIZE results. ✓
 - [x] **Admin loading skeletons & error states** — skeleton rows/cards on posts, tags, media, edit page; retry buttons on error. ✓
@@ -22,6 +33,8 @@ _(nothing in progress)_
 - [x] **Post detail container** — Removed inner `max-w-3xl mx-auto` prose constraint; content now spans full `PageContainer` width. Cover image set to `h-[300px]` fixed height, center-cropped via `object-cover object-center`. ✓
 - [x] **Excerpt ellipsis rendering fix** — `\u2026` in JSX text nodes was rendering as literal backslash-u characters (JSX text does not process JS escape sequences). Replaced with the actual `…` character (U+2026) in `post-hero.tsx` and `post-row-item.tsx`. ✓
 - [x] **Router cache / auth persistence fix** — Added `staleTimes: { dynamic: 0 }` to `next.config.ts`. Without this, previously visited `/mod/*` pages were served from the browser's in-memory router cache after logout, bypassing the proxy auth check. ✓
+- [x] **Post form — conditional field visibility by type** — Type selector moved to top; `useWatch` drives per-type field matrix (Title/Cover/Tags/Content/Dates/PromoCode/Metadata); `start_date`, `end_date`, `promo_code` added to `PostCreateSchema`. ✓
+- [x] **EVENT external_link input** — Raw Metadata JSON `<details>` block removed; replaced with a labeled URL input for EVENT that reads/writes `post_metadata.external_link`; key omitted when empty. ✓
 
 ## Done
 

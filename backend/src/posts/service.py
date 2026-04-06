@@ -100,7 +100,9 @@ async def get_by_slug(slug: str, session: AsyncSession) -> Post:
 
 
 async def create(data: PostCreate, session: AsyncSession) -> Post:
-    slug = await _unique_slug(data.title, session)
+    # PROMO posts have no title — use promo_code as slug base, fall back to UUID fragment
+    slug_base = data.title or data.promo_code or str(uuid.uuid4())[:8]
+    slug = await _unique_slug(slug_base, session)
     tags = await _resolve_tags(data.tag_ids, session)
     post = Post(
         type=data.type,
@@ -113,6 +115,8 @@ async def create(data: PostCreate, session: AsyncSession) -> Post:
         start_date=data.start_date,
         end_date=data.end_date,
         promo_code=data.promo_code.upper() if data.promo_code is not None else None,
+        external_link=data.external_link,
+        redirect_to_external=data.redirect_to_external,
     )
     session.add(post)
     await session.commit()
@@ -124,7 +128,9 @@ async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) ->
     post = await get_by_id(post_id, session)
     if data.title is not None:
         post.title = data.title
-        post.slug = await _unique_slug(data.title, session, exclude_id=post_id)
+        # Only regenerate slug when title is non-empty (PROMO updates send title="")
+        if data.title:
+            post.slug = await _unique_slug(data.title, session, exclude_id=post_id)
     if data.content is not None:
         post.content = data.content
     if data.post_metadata is not None:
@@ -139,6 +145,10 @@ async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) ->
         post.end_date = data.end_date
     if data.promo_code is not None:
         post.promo_code = data.promo_code.upper()
+    if "external_link" in data.model_fields_set:
+        post.external_link = data.external_link
+    if "redirect_to_external" in data.model_fields_set:
+        post.redirect_to_external = data.redirect_to_external
     await session.commit()
     await session.refresh(post)
     return post
