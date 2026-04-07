@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.posts.constants import PostStatus, PostType
+from src.posts.utils import inject_excerpt
 from src.tags.schemas import TagRead
 
 
@@ -90,38 +91,7 @@ class PostRead(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _inject_excerpt(cls, data: Any) -> Any:
-        """Compute ``excerpt`` from TipTap ``content``, same logic as PostListItem."""
-        from src.posts.service import extract_excerpt  # noqa: PLC0415
-
-        if isinstance(data, dict):
-            if "excerpt" not in data:
-                data["excerpt"] = extract_excerpt(data.get("content"))
-            return data
-
-        # ORM instance path — copy all attributes and inject excerpt
-        content = getattr(data, "content", None)
-        obj_dict = {
-            "id": data.id,
-            "type": data.type,
-            "status": data.status,
-            "title": data.title,
-            "slug": data.slug,
-            "content": content,
-            "post_metadata": data.post_metadata,
-            "created_at": data.created_at,
-            "updated_at": data.updated_at,
-            "published_at": data.published_at,
-            "start_date": data.start_date,
-            "end_date": data.end_date,
-            "promo_code": data.promo_code,
-            "external_link": data.external_link,
-            "redirect_to_external": data.redirect_to_external,
-            "excerpt": extract_excerpt(content),
-            "tags": data.tags,
-            "media": data.media,
-            "cover_media": data.cover_media,
-        }
-        return obj_dict
+        return inject_excerpt(data)
 
 
 class PostListItem(BaseModel):
@@ -147,38 +117,4 @@ class PostListItem(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _inject_excerpt(cls, data: Any) -> Any:
-        """Compute and inject ``excerpt`` from the TipTap ``content`` field.
-
-        This validator runs before field assignment. When FastAPI serializes an
-        ORM object with ``from_attributes=True``, the validator receives the ORM
-        instance. We read ``content``, compute the excerpt, then return a plain
-        dict so that ``excerpt`` is present for field validation. Nested ORM
-        objects (tags, media, cover_media) are carried over as-is; their own
-        schemas also have ``from_attributes=True`` and will resolve them.
-        """
-        from src.posts.service import extract_excerpt  # noqa: PLC0415
-
-        if isinstance(data, dict):
-            if "excerpt" not in data:
-                data["excerpt"] = extract_excerpt(data.get("content"))
-            return data
-
-        # ORM instance path
-        return {
-            "id": data.id,
-            "type": data.type,
-            "status": data.status,
-            "title": data.title,
-            "slug": data.slug,
-            "excerpt": extract_excerpt(getattr(data, "content", None)),
-            "created_at": data.created_at,
-            "published_at": data.published_at,
-            "start_date": data.start_date,
-            "end_date": data.end_date,
-            "promo_code": data.promo_code,
-            "external_link": data.external_link,
-            "redirect_to_external": data.redirect_to_external,
-            "tags": data.tags,
-            "media": data.media,
-            "cover_media": data.cover_media,
-        }
+        return inject_excerpt(data)

@@ -39,13 +39,14 @@ Single shared `async_sessionmaker` → per-request sessions via `get_db()` depen
 
 ### Tables
 
+Field-level definitions → [`API_CONTRACT.md`](../../API_CONTRACT.md) § Data Shapes.
+
 ```
-user        UUID PK  fastapi-users managed; superuser flag for admin
-post        UUID PK  type + status enums; JSON content + metadata; timestamps; nullable FK cover_media_id → media.id (SET NULL on delete)
-                     typed nullable columns: start_date (TIMESTAMPTZ), end_date (TIMESTAMPTZ), promo_code (VARCHAR 100, always uppercase)
-tag         UUID PK  unique name + unique slug
-post_tag             M2M join (post ↔ tag); CASCADE both sides
-media       UUID PK  nullable FK to post; SET NULL on post delete
+user        fastapi-users managed
+post        core content entity
+tag         taxonomy label
+post_tag    M2M join (post ↔ tag)
+media       uploaded file record
 ```
 
 ### Relationships

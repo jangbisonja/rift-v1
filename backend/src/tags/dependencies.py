@@ -8,5 +8,7 @@ from src.tags.models import Tag
 from src.tags import service
 
 
-async def valid_tag_id(tag_id: uuid.UUID, session: AsyncSession = Depends(get_db)) -> Tag:
+async def valid_tag_id(
+    tag_id: uuid.UUID, session: AsyncSession = Depends(get_db)
+) -> Tag:
     return await service.get_by_id(tag_id, session)

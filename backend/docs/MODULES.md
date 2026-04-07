@@ -9,10 +9,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Purpose**: User identity, login, and access control.
 
-**Endpoints**:
-- `POST /auth/login` — email/password → JWT token (public)
-- `GET /users/me` — current user profile (authenticated)
-- `PATCH /users/me` — update own profile (authenticated)
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
 
 **Key files**:
 - `models.py` — `User` extends `SQLAlchemyBaseUserTableUUID`; no extra columns yet
@@ -33,15 +30,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Purpose**: Core content management — create, read, update, publish, and delete content items.
 
-**Endpoints**:
-- `GET /posts` — list posts, filterable by `type`/`status`/`slug`, paginated; `?visibility=public|all` (default `all`) applies expiry filter when `public` (public)
-- `GET /posts/{id}` — single post (public)
-- `POST /posts` — create (superuser)
-- `PUT /posts/{id}` — full update (superuser)
-- `PATCH /posts/{id}/publish` — set status to PUBLISHED, records `published_at` (superuser)
-- `PATCH /posts/{id}/unpublish` — set status back to DRAFT (superuser)
-- `PATCH /posts/{id}/archive` — set status to ARCHIVE (superuser)
-- `DELETE /posts/{id}` — delete (superuser)
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
 
 **Key files**:
 - `constants.py` — `PostType` enum: `NEWS`, `ARTICLE`, `PROMO`, `EVENT`; `PostStatus` enum: `DRAFT`, `PUBLISHED`, `ARCHIVE`
@@ -69,11 +58,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Purpose**: File upload and management — accepts images, converts to WebP, stores on disk, optionally links to a post.
 
-**Endpoints**:
-- `GET /media` — list all media, paginated (superuser)
-- `POST /media/upload` — upload file, returns `Media` record (superuser)
-- `POST /media/{id}/attach/{post_id}` — link existing media to a post (superuser)
-- `DELETE /media/{id}` — delete record + file from disk (superuser)
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
 
 **Key files**:
 - `models.py` — `Media` (UUID PK, `post_id` FK nullable, `path`, `original_name`, `created_at`)
@@ -92,10 +77,7 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 **Purpose**: Content taxonomy — create and manage labels that attach to posts via M2M.
 
-**Endpoints**:
-- `GET /tags` — list all tags (public)
-- `POST /tags` — create tag (superuser)
-- `DELETE /tags/{id}` — delete tag (superuser)
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
 
 **Key files**:
 - `models.py` — `Tag` (UUID PK, `name` unique, `slug` unique)

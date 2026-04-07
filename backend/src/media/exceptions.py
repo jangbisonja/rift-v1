@@ -3,7 +3,9 @@ from fastapi import HTTPException, status
 
 class MediaNotFound(HTTPException):
     def __init__(self):
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Media not found"
+        )
 
 
 class InvalidFileType(HTTPException):

@@ -1,13 +1,14 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from src.main import app, _create_admin
+from src.auth.service import ensure_admin_exists
+from src.main import app
 
 
 @pytest.fixture(scope="session", autouse=True)
 async def seed_db():
     """ASGITransport does not trigger ASGI lifespan, so admin must be seeded explicitly."""
-    await _create_admin()
+    await ensure_admin_exists()
 
 
 @pytest.fixture(scope="session")

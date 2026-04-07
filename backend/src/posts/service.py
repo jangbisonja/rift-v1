@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
 from slugify import slugify
 from sqlalchemy import or_, select
@@ -14,32 +13,6 @@ from src.posts.schemas import PostCreate, PostUpdate
 from src.tags.models import Tag
 
 
-def extract_excerpt(content: dict[str, Any] | None, word_limit: int = 10) -> str:
-    """Return the first `word_limit` words of plain text from a TipTap JSON document.
-
-    Walks the node tree in document order, collecting every ``text`` node value,
-    then joins them with a single space and returns the first `word_limit` words.
-    Returns ``""`` if *content* is null, empty, or structurally malformed.
-    """
-    if not content or not isinstance(content, dict):
-        return ""
-
-    words: list[str] = []
-
-    def _walk(node: Any) -> None:
-        if not isinstance(node, dict):
-            return
-        if node.get("type") == "text":
-            node_text = node.get("text", "")
-            if isinstance(node_text, str):
-                words.extend(node_text.split())
-        for child in node.get("content", []):
-            _walk(child)
-
-    _walk(content)
-    return " ".join(words[:word_limit])
-
-
 async def _resolve_tags(tag_ids: list[uuid.UUID], session: AsyncSession) -> list[Tag]:
     if not tag_ids:
         return []
@@ -47,7 +20,9 @@ async def _resolve_tags(tag_ids: list[uuid.UUID], session: AsyncSession) -> list
     return list(result.scalars().all())
 
 
-async def _unique_slug(base: str, session: AsyncSession, exclude_id: uuid.UUID | None = None) -> str:
+async def _unique_slug(
+    base: str, session: AsyncSession, exclude_id: uuid.UUID | None = None
+) -> str:
     slug = slugify(base)
     query = select(Post).where(Post.slug == slug)
     if exclude_id:
@@ -77,9 +52,7 @@ async def get_all(
     if visibility == "public":
         grace_days = settings.EXPIRY_GRACE_DAYS
         cutoff = datetime.now(timezone.utc) - timedelta(days=grace_days)
-        query = query.where(
-            or_(Post.end_date.is_(None), Post.end_date > cutoff)
-        )
+        query = query.where(or_(Post.end_date.is_(None), Post.end_date > cutoff))
     result = await session.execute(query)
     return list(result.scalars().all())
 
@@ -127,29 +100,28 @@ async def create(data: PostCreate, session: AsyncSession) -> Post:
 
 async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) -> Post:
     post = await get_by_id(post_id, session)
-    if data.title is not None:
-        post.title = data.title
-        # Only regenerate slug when title is non-empty (PROMO updates send title="")
-        if data.title:
-            post.slug = await _unique_slug(data.title, session, exclude_id=post_id)
-    if data.content is not None:
-        post.content = data.content
-    if data.post_metadata is not None:
-        post.post_metadata = data.post_metadata
-    if data.tag_ids is not None:
-        post.tags = await _resolve_tags(data.tag_ids, session)
-    if "cover_media_id" in data.model_fields_set:
-        post.cover_media_id = data.cover_media_id
-    if data.start_date is not None:
-        post.start_date = data.start_date
-    if data.end_date is not None:
-        post.end_date = data.end_date
-    if data.promo_code is not None:
-        post.promo_code = data.promo_code.upper()
-    if "external_link" in data.model_fields_set:
-        post.external_link = data.external_link
-    if "redirect_to_external" in data.model_fields_set:
-        post.redirect_to_external = data.redirect_to_external
+    changes = data.model_dump(exclude_unset=True)
+
+    # --- Special fields requiring custom logic ---
+
+    # Slug regeneration: only when title is provided AND non-empty
+    if "title" in changes and changes["title"]:
+        changes["slug"] = await _unique_slug(
+            changes["title"], session, exclude_id=post_id
+        )
+
+    # M2M tags: resolve UUIDs to ORM objects
+    if "tag_ids" in changes:
+        post.tags = await _resolve_tags(changes.pop("tag_ids"), session)
+
+    # Promo code: enforce uppercase
+    if "promo_code" in changes and changes["promo_code"] is not None:
+        changes["promo_code"] = changes["promo_code"].upper()
+
+    # --- Generic field application ---
+    for field, value in changes.items():
+        setattr(post, field, value)
+
     await session.commit()
     await session.refresh(post)
     return post

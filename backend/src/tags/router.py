@@ -16,11 +16,22 @@ async def list_tags(session: AsyncSession = Depends(get_db)):
     return await service.get_all(session)
 
 
-@router.post("", response_model=TagRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(current_superuser)])
+@router.post(
+    "",
+    response_model=TagRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(current_superuser)],
+)
 async def create_tag(data: TagCreate, session: AsyncSession = Depends(get_db)):
     return await service.create(data, session)
 
 
-@router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(current_superuser)])
-async def delete_tag(tag: Tag = Depends(valid_tag_id), session: AsyncSession = Depends(get_db)):
+@router.delete(
+    "/{tag_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def delete_tag(
+    tag: Tag = Depends(valid_tag_id), session: AsyncSession = Depends(get_db)
+):
     await service.delete(tag.id, session)

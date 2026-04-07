@@ -50,21 +50,12 @@ Each module: `router.py`, `schemas.py`, `models.py`, `service.py`,
 
 ## Data Models
 
-**Post** — `id` (UUID PK), `type` (PostType enum), `status` (PostStatus enum),
-`title`, `slug` (unique), `content` (JSON/TipTap), `post_metadata` (JSON/SEO only),
-`created_at`, `updated_at`, `published_at`. M2M → `tags` via `post_tag`. O2M → `media`.
-FK → `cover_media_id` (nullable, `SET NULL on delete`).
-Typed nullable columns: `start_date` (TIMESTAMPTZ), `end_date` (TIMESTAMPTZ), `promo_code` (VARCHAR 100, always stored uppercase, enforced in service layer). Used by PROMO and EVENT types. Do NOT store these in `post_metadata`.
+Field definitions and response schemas → `../API_CONTRACT.md`.
 
-Response schemas and data shapes: see `../API_CONTRACT.md`.
-
-**Media** — `id` (UUID PK), `post_id` (FK nullable, SET NULL on delete),
-`path` (`uploads/YYYY/MM/DD/UUID.webp`), `original_name`, `created_at`.
-All uploads must be converted to WebP on save.
-
-**Tag** — `id` (UUID PK), `name` (unique), `slug` (unique, auto-generated).
-
-**User** — via `SQLAlchemyBaseUserTableUUID` mixin (fastapi-users).
+- **Post** — core content entity. M2M → tags via `post_tag`. O2M → media. FK → `cover_media_id`.
+- **Media** — uploaded file. All uploads converted to WebP.
+- **Tag** — taxonomy label. Unique name + auto-generated slug.
+- **User** — via `SQLAlchemyBaseUserTableUUID` mixin (fastapi-users).
 
 ## Auth
 
@@ -131,7 +122,7 @@ must always send ISO-8601 strings with a UTC offset (e.g. `2024-01-01T00:00:00Z`
 | Trigger | Action |
 |---|---|
 | Adding a new module | Add its entry to `docs/MODULES.md` before writing any code |
-| Adding or removing an endpoint | Update that module's **Endpoints** list in `docs/MODULES.md` |
+| Adding or removing an endpoint | Update `../API_CONTRACT.md` (SSOT); `docs/MODULES.md` links there automatically |
 | Changing a schema, model, or service behavior | Update that module's entry in `docs/MODULES.md` |
 | Adding a new design decision | Add it to the **Design decisions** block of the relevant module |
 | Changing auth, storage, config, or DB structure | Update `docs/ARCHITECTURE.md` |

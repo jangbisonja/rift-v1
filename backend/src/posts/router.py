@@ -38,31 +38,66 @@ async def get_post(post: Post = Depends(valid_post_id)):
     return post
 
 
-@router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(current_superuser)])
+@router.post(
+    "",
+    response_model=PostRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(current_superuser)],
+)
 async def create_post(data: PostCreate, session: AsyncSession = Depends(get_db)):
     return await service.create(data, session)
 
 
-@router.put("/{post_id}", response_model=PostRead, dependencies=[Depends(current_superuser)])
-async def update_post(data: PostUpdate, post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)):
+@router.put(
+    "/{post_id}", response_model=PostRead, dependencies=[Depends(current_superuser)]
+)
+async def update_post(
+    data: PostUpdate,
+    post: Post = Depends(valid_post_id),
+    session: AsyncSession = Depends(get_db),
+):
     return await service.update(post.id, data, session)
 
 
-@router.patch("/{post_id}/publish", response_model=PostRead, dependencies=[Depends(current_superuser)])
-async def publish_post(post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)):
+@router.patch(
+    "/{post_id}/publish",
+    response_model=PostRead,
+    dependencies=[Depends(current_superuser)],
+)
+async def publish_post(
+    post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)
+):
     return await service.publish(post.id, session)
 
 
-@router.patch("/{post_id}/unpublish", response_model=PostRead, dependencies=[Depends(current_superuser)])
-async def unpublish_post(post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)):
+@router.patch(
+    "/{post_id}/unpublish",
+    response_model=PostRead,
+    dependencies=[Depends(current_superuser)],
+)
+async def unpublish_post(
+    post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)
+):
     return await service.unpublish(post.id, session)
 
 
-@router.patch("/{post_id}/archive", response_model=PostRead, dependencies=[Depends(current_superuser)])
-async def archive_post(post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)):
+@router.patch(
+    "/{post_id}/archive",
+    response_model=PostRead,
+    dependencies=[Depends(current_superuser)],
+)
+async def archive_post(
+    post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)
+):
     return await service.archive(post.id, session)
 
 
-@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(current_superuser)])
-async def delete_post(post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)):
+@router.delete(
+    "/{post_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(current_superuser)],
+)
+async def delete_post(
+    post: Post = Depends(valid_post_id), session: AsyncSession = Depends(get_db)
+):
     await service.delete(post.id, session)
