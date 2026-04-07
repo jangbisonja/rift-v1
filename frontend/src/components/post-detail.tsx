@@ -3,7 +3,7 @@ import { RichTextContent } from "@/components/rich-text-content";
 import { PageContainer } from "@/components/page-container";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/date";
+import { formatDate, getPostPhase } from "@/lib/date";
 import { ExternalLink } from "lucide-react";
 import type { Post } from "@/lib/schemas";
 
@@ -20,6 +20,25 @@ const TYPE_LABEL: Record<string, string> = {
   PROMO:   "Промокоды",
   EVENT:   "События",
 };
+
+function EventPhaseLabel({ startDate, endDate }: { startDate: string | null; endDate: string | null }) {
+  const phase = getPostPhase(startDate, endDate);
+  switch (phase.kind) {
+    case "indefinite":
+    case "active_indefinite":
+      return <span className="text-muted-foreground">Бессрочно</span>;
+    case "upcoming":
+      return <span className="text-muted-foreground">Начнётся через {phase.days} дней</span>;
+    case "starting_today":
+      return <span className="text-yellow-500">Начинается сегодня</span>;
+    case "active":
+      return <span className="text-muted-foreground">Осталось {phase.days} дней</span>;
+    case "expiring_today":
+      return <span className="text-yellow-500">Истекает сегодня</span>;
+    case "expired":
+      return <span className="text-destructive">Истёк {phase.days} дней назад</span>;
+  }
+}
 
 interface PostDetailProps {
   post: Post;
@@ -54,6 +73,14 @@ export function PostDetail({ post }: PostDetailProps) {
               <p className="text-sm text-muted-foreground">
                 {formatDate(post.published_at)}
               </p>
+            )}
+            {post.type === "EVENT" && (post.start_date || post.end_date) && (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                {post.start_date && <span>{formatDate(post.start_date)}</span>}
+                {post.start_date && post.end_date && <span>—</span>}
+                {post.end_date && <span>{formatDate(post.end_date)}</span>}
+                <EventPhaseLabel startDate={post.start_date} endDate={post.end_date} />
+              </div>
             )}
             {post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">

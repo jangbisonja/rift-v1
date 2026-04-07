@@ -269,8 +269,21 @@ they must NOT be attached via the attach endpoint. `CoverImage` component accept
 **Scrollbar customization pattern**
 Use the `.scrollbar-thin` utility class defined in `globals.css`. It sets `scrollbar-width: thin` + `scrollbar-color` (standard spec) and `::-webkit-scrollbar` rules (WebKit). Both use `var(--color-border)` so the scrollbar adapts to dark/light theme automatically. Apply to any `overflow-x-auto` or `overflow-y-auto` container that needs a subtle scrollbar.
 
-**Today indicator in Timeline — `top: 0; bottom: 0` stretch trick**
-An absolutely-positioned `flex-col` div with `top: 0; bottom: 0` correctly stretches to the parent's full content height even when the parent is `height: auto`, as long as the parent is `position: relative` (establishing the containing block). The downward triangle uses the CSS border trick (`borderLeft/Right: transparent`, `borderTop: solid`) — no icon library needed.
+**Today indicator in Timeline — final architecture**
+The indicator is split into two independent elements to avoid the alignment problem entirely:
+
+1. **Triangle** — a single `absolute` div (`w-0 h-0`, CSS border trick) inside the outer `relative pt-[5px]` wrapper. `top: 0`, `left: column_center - 4`. The 5px padding creates the gap; the triangle body (5px tall) fills it, tip flush with the date row top.
+
+2. **Line** — a separate `absolute top-0 bottom-0 w-px` div inside the events container (`relative pt-[10px] pb-[10px]`), same `left: column_center`. Starts strictly below the date row — no overlap with the date cell.
+
+3. **Today date cell** — `bg-primary/10 ring-1 ring-primary`. The ring visually bridges triangle and line.
+
+**Approaches rejected:**
+- *Flex centering (original)*: `items-center` on a container whose only child is a 0-width border-trick element gives flexbox nothing to center against — 1px sub-pixel drift between triangle tip and line was unavoidable.
+- *Explicit container width (8px)*: Same problem — the 1px line center (X+0.5) and the triangle tip (integer X) can never share the same CSS pixel at 1× DPR.
+- *SVG*: Solved the coordinate problem but introduced unnecessary complexity for a layout that should be pure CSS/HTML.
+- *Opaque date cell background (`bg-background`)*: Theme-dependent hack — the line was still physically there, just hidden. Failed in practice because `bg-primary/10` on adjacent cells made the mismatch visible at some zoom levels.
+- *Split triangle + line (final)*: No alignment needed at all — triangle and line live in separate layout contexts and never touch. The date cell's ring border creates the visual continuity.
 
 **Cover image is saved atomically with the post form**
 `PostForm` manages the cover via `initialCoverMedia` prop (display) + `onCoverUpload` prop
@@ -304,6 +317,34 @@ never stored in `post_metadata`. For EVENT, `post_metadata.external_link` is exp
 dedicated URL input (not a raw JSON editor). Future public-side logic: if `external_link` is
 set and a checkbox is checked, the post link redirects to the external URL instead of the
 detail page. Start/End dates use `datetime-local` inputs; null = not set (indefinite).
+
+**Post phase label logic — `getPostPhase(startDate, endDate)` in `src/lib/date.ts`**
+Both `DaysLabel` components (in `timeline.tsx` and `promo-item.tsx`) share identical
+phase-based label logic. The function returns a discriminated union used to render
+Russian-language labels. Decision matrix (Moscow time throughout):
+
+| `start_date` | `end_date` | Condition | Label |
+|---|---|---|---|
+| null | null | — | Бессрочно |
+| null | future | — | Осталось X дней |
+| null | today | — | Истекает сегодня |
+| null | past | — | Истёк X дней назад |
+| future | any | before start | Начнётся через X дней |
+| today | any | starts today | Начинается сегодня |
+| past | null | no end set | Бессрочно |
+| past | future | ongoing | Осталось X дней |
+| past | today | — | Истекает сегодня |
+| past | past | — | Истёк X дней назад |
+
+Key rule: `start_date` takes priority if it's in the future (or today). Once it has
+passed, fall through to `end_date` logic. Logic is identical for EVENT and PROMO types.
+The old `daysRemaining(endDate)` helper is replaced by `getPostPhase(startDate, endDate)`.
+
+**`suppressHydrationWarning` on all date-dependent text spans**
+`DaysLabel` calls `new Date()` at render time. Server render and client hydration
+timestamps can differ, causing React error #418 (text node mismatch). Fix: add
+`suppressHydrationWarning` to every `<span>` that renders dynamic date text.
+This applies to both `timeline.tsx` and `promo-item.tsx`.
 
 ## TODO.md
 

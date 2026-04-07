@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from slugify import slugify
-from sqlalchemy import select, text
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -76,8 +76,9 @@ async def get_all(
         query = query.where(Post.slug == slug)
     if visibility == "public":
         grace_days = settings.EXPIRY_GRACE_DAYS
+        cutoff = datetime.now(timezone.utc) - timedelta(days=grace_days)
         query = query.where(
-            text(f"post.end_date IS NULL OR post.end_date > now() - INTERVAL '{grace_days} days'")
+            or_(Post.end_date.is_(None), Post.end_date > cutoff)
         )
     result = await session.execute(query)
     return list(result.scalars().all())

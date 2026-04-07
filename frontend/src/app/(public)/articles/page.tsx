@@ -21,7 +21,7 @@ export default async function ArticlesPage() {
       {posts.length === 0 ? (
         <p className="text-muted-foreground">Статей пока нет.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-3">
           {posts.map((p) => (
             <PostRowItem key={p.id} post={p} href={postHref(p.type, p.slug)} />
           ))}

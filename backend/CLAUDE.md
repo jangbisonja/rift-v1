@@ -102,9 +102,20 @@ not through the type annotation.
 **UTC timezone enforcement at the connection level**
 The VPS server timezone may not be UTC. To guarantee all timestamps are stored
 and returned as UTC, `create_async_engine` in `src/database.py` passes
-`connect_args={"options": "-c timezone=UTC"}`. This forces every PostgreSQL
+`connect_args={"server_settings": {"timezone": "UTC"}}`. This forces every PostgreSQL
 session opened by the pool to run with `timezone=UTC`, regardless of the OS
 or `postgresql.conf` setting.
+
+**visibility filter must use SQLAlchemy `or_()`, not raw `text()`**
+In `get_all()`, the `end_date` expiry check was originally written as a raw
+`text()` clause: `"post.end_date IS NULL OR post.end_date > now() - INTERVAL ..."`.
+Because SQL `OR` has lower precedence than `AND`, the raw clause bleeds across
+the entire `WHERE`, making the `IS NULL` branch bypass all preceding filters
+(`post_type`, `post_status`). In production this caused `GET /posts?post_type=EVENT&visibility=public`
+to return PROMO records (and vice versa).
+Fix: compute the cutoff in Python (`datetime.now(timezone.utc) - timedelta(days=grace_days)`)
+and use `or_(Post.end_date.is_(None), Post.end_date > cutoff)` so SQLAlchemy
+wraps the OR in parentheses and it composes correctly with all other WHERE clauses.
 
 **Timezone-aware validation on PostCreate / PostUpdate**
 Pydantic v2 silently accepts naive datetime strings (no `+00:00` suffix) for

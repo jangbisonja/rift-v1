@@ -33,18 +33,69 @@ export function formatDateTime(dateStr: string): string {
 }
 
 /**
- * Calculate the number of full days remaining until `endDateStr` (interpreted as
- * end-of-day in Moscow time). "Now" is also resolved in Moscow time so the result
- * is correct near midnight regardless of the server/browser timezone.
- * Positive = days left, 0 = expires today, negative = already expired.
+ * Get today's date as "YYYY-MM-DD" in Moscow time, using sv-SE locale
+ * (produces ISO-format date strings natively).
  */
-export function daysRemaining(endDateStr: string): number {
-  const endMs = new Date(endDateStr).getTime();
-  // Resolve "now" in Moscow (UTC+3, no DST)
-  const moscowNow = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
-  );
-  return Math.floor((endMs - moscowNow.getTime()) / 86_400_000);
+function getMoscowTodayDateStr(): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/**
+ * Count whole calendar days between two YYYY-MM-DD strings.
+ * Returns a positive number when b is after a.
+ */
+function calendarDaysBetween(a: string, b: string): number {
+  const msA = new Date(a).getTime();
+  const msB = new Date(b).getTime();
+  return Math.round(Math.abs(msB - msA) / 86_400_000);
+}
+
+export type PostPhase =
+  | { kind: "indefinite" }
+  | { kind: "upcoming"; days: number }
+  | { kind: "starting_today" }
+  | { kind: "active_indefinite" }
+  | { kind: "active"; days: number }
+  | { kind: "expiring_today" }
+  | { kind: "expired"; days: number };
+
+/**
+ * Determine the current phase of a post based on its start and end dates.
+ * All comparisons are made against today's calendar date in Moscow time (UTC+3).
+ * Date strings are compared as YYYY-MM-DD without timestamp conversion.
+ */
+export function getPostPhase(
+  startDate: string | null,
+  endDate: string | null,
+): PostPhase {
+  const today = getMoscowTodayDateStr();
+  // Normalize to date-only (strip any time component)
+  const start = startDate ? startDate.split("T")[0] : null;
+  const end = endDate ? endDate.split("T")[0] : null;
+
+  if (!start && !end) return { kind: "indefinite" };
+
+  if (!start && end) {
+    // No start date — evaluate purely by end date
+    if (end > today) return { kind: "active", days: calendarDaysBetween(today, end) };
+    if (end === today) return { kind: "expiring_today" };
+    return { kind: "expired", days: calendarDaysBetween(end, today) };
+  }
+
+  // Has a start date
+  if (start! > today) return { kind: "upcoming", days: calendarDaysBetween(today, start!) };
+  if (start === today) return { kind: "starting_today" };
+
+  // start is in the past
+  if (!end) return { kind: "active_indefinite" };
+  if (end > today) return { kind: "active", days: calendarDaysBetween(today, end) };
+  if (end === today) return { kind: "expiring_today" };
+  return { kind: "expired", days: calendarDaysBetween(end, today) };
 }
 
 /**

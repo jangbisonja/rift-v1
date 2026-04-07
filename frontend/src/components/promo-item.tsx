@@ -2,21 +2,30 @@
 
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
-import { formatDate, daysRemaining } from "@/lib/date";
+import { formatDate, getPostPhase } from "@/lib/date";
 import type { PostListItem } from "@/lib/schemas";
 
 interface PromoItemProps {
   post: PostListItem;
 }
 
-function DaysLabel({ endDate }: { endDate: string | null }) {
-  if (!endDate) return <span className="text-xs text-muted-foreground">Бессрочно</span>;
-  const days = daysRemaining(endDate);
-  if (days > 0)
-    return <span className="text-xs text-muted-foreground">Осталось {days} дней</span>;
-  if (days === 0)
-    return <span className="text-xs text-yellow-500">Истекает сегодня</span>;
-  return <span className="text-xs text-destructive">Истёк</span>;
+function DaysLabel({ startDate, endDate }: { startDate: string | null; endDate: string | null }) {
+  const phase = getPostPhase(startDate, endDate);
+  switch (phase.kind) {
+    case "indefinite":
+    case "active_indefinite":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Бессрочно</span>;
+    case "upcoming":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Начнётся через {phase.days} дней</span>;
+    case "starting_today":
+      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Начинается сегодня</span>;
+    case "active":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Осталось {phase.days} дней</span>;
+    case "expiring_today":
+      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Истекает сегодня</span>;
+    case "expired":
+      return <span className="text-xs text-destructive" suppressHydrationWarning>Истёк {phase.days} дней назад</span>;
+  }
 }
 
 export function PromoItem({ post }: PromoItemProps) {
@@ -61,7 +70,7 @@ export function PromoItem({ post }: PromoItemProps) {
         {post.start_date
           ? <p className="text-xs text-muted-foreground">{formatDate(post.start_date)}</p>
           : <span />}
-        <DaysLabel endDate={post.end_date} />
+        <DaysLabel startDate={post.start_date} endDate={post.end_date} />
       </div>
     </article>
   );

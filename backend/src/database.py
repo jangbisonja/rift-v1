@@ -7,7 +7,7 @@ from src.config import settings
 engine = create_async_engine(
     settings.database_url,
     echo=False,
-    connect_args={"options": "-c timezone=UTC"},
+    connect_args={"server_settings": {"timezone": "UTC"}},
 )
 
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)

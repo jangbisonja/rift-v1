@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import { daysRemaining } from "@/lib/date";
+import { getPostPhase } from "@/lib/date";
 import { postHref } from "@/lib/post-href";
 import type { PostListItem } from "@/lib/schemas";
 
@@ -74,12 +74,23 @@ function getEventColumns(event: PostListItem, days: Date[]): { startIdx: number;
 
 // ─── DaysLabel ────────────────────────────────────────────────────────────────
 
-function DaysLabel({ endDate }: { endDate: string | null }) {
-  if (!endDate) return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Бессрочно</span>;
-  const days = daysRemaining(endDate);
-  if (days > 0) return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Осталось {days} дней</span>;
-  if (days === 0) return <span className="text-xs text-yellow-500" suppressHydrationWarning>Истекает сегодня</span>;
-  return <span className="text-xs text-destructive" suppressHydrationWarning>Истёк</span>;
+function DaysLabel({ startDate, endDate }: { startDate: string | null; endDate: string | null }) {
+  const phase = getPostPhase(startDate, endDate);
+  switch (phase.kind) {
+    case "indefinite":
+    case "active_indefinite":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Бессрочно</span>;
+    case "upcoming":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Начнётся через {phase.days} дней</span>;
+    case "starting_today":
+      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Начинается сегодня</span>;
+    case "active":
+      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Осталось {phase.days} дней</span>;
+    case "expiring_today":
+      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Истекает сегодня</span>;
+    case "expired":
+      return <span className="text-xs text-destructive" suppressHydrationWarning>Истёк {phase.days} дней назад</span>;
+  }
 }
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
@@ -98,87 +109,88 @@ export function Timeline({ events, today }: TimelineProps) {
 
   return (
     <div className="overflow-x-auto scrollbar-thin">
-      {/* Day header row */}
-      <div className="flex" style={{ width: STRIP_WIDTH }}>
-        {days.map((day, i) => {
-          const isToday = i === TODAY_IDX;
-          const isFirst = day.getDate() === 1;
-          const topLabel = isFirst ? MONTH_ABBRS[day.getMonth()] : DOW_ABBRS[day.getDay()];
-          return (
-            <div
-              key={i}
-              ref={isToday ? todayRef : undefined}
-              className={`flex flex-col items-center shrink-0 text-xs leading-tight py-0.5 ${isToday ? "bg-primary/10" : ""}`}
-              style={{ width: COL_WIDTH }}
-            >
-              <span className={isFirst ? "font-bold text-primary" : "text-muted-foreground"}>
-                {topLabel}
-              </span>
-              <span className={isToday ? "font-bold text-primary" : "text-muted-foreground"}>
-                {day.getDate()}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      {/* Outer wrapper — establishes containing block for the indicator */}
+      <div className="relative pt-[5px]" style={{ width: STRIP_WIDTH }}>
 
-      {/* Event lanes — one per event */}
-      <div className="relative mt-1" style={{ width: STRIP_WIDTH }}>
-        {/* Today's vertical indicator */}
+        {/* Today indicator — triangle sits in the 5px gap above the date row, tip flush with its top edge */}
         <div
           aria-hidden="true"
-          className="absolute top-0 bottom-0 pointer-events-none flex flex-col items-center"
-          style={{ left: TODAY_IDX * COL_WIDTH + Math.floor(COL_WIDTH / 2) - 4 }}
-        >
-          {/* Downward-pointing triangle */}
-          <div
-            className="shrink-0 w-0 h-0"
-            style={{
-              borderLeft: '4px solid transparent',
-              borderRight: '4px solid transparent',
-              borderTop: '5px solid var(--color-muted-foreground)',
-              opacity: 0.4,
-            }}
-          />
-          {/* Vertical line */}
-          <div
-            className="w-px flex-1"
-            style={{ background: 'var(--color-muted-foreground)', opacity: 0.2 }}
-          />
+          className="absolute w-0 h-0 pointer-events-none"
+          style={{
+            top: 0,
+            left: TODAY_IDX * COL_WIDTH + COL_WIDTH / 2 - 4,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderTop: '5px solid var(--color-primary)',
+          }}
+        />
+
+        {/* Day header row */}
+        <div className="flex">
+          {days.map((day, i) => {
+            const isToday = i === TODAY_IDX;
+            const isFirst = day.getDate() === 1;
+            const topLabel = isFirst ? MONTH_ABBRS[day.getMonth()] : DOW_ABBRS[day.getDay()];
+            return (
+              <div
+                key={i}
+                ref={isToday ? todayRef : undefined}
+                className={`flex flex-col items-center shrink-0 text-xs leading-tight py-0.5 ${isToday ? "bg-primary/10 ring-1 ring-primary" : ""}`}
+                style={{ width: COL_WIDTH }}
+              >
+                <span className={isFirst ? "font-bold text-primary" : "text-muted-foreground"}>
+                  {topLabel}
+                </span>
+                <span className={isToday ? "font-bold text-primary" : "text-muted-foreground"}>
+                  {day.getDate()}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
-        {events.map((event) => {
-          const { startIdx, endIdx } = getEventColumns(event, days);
-          const spanWidth = (endIdx - startIdx + 1) * COL_WIDTH;
-          const isExternal = event.redirect_to_external && !!event.external_link;
-          const href = (isExternal && event.external_link) || postHref(event.type, event.slug);
+        {/* Event lanes */}
+        <div className="relative pt-[10px] pb-[10px]">
+          {/* Today indicator — vertical line starts here, below the date row */}
+          <div
+            aria-hidden="true"
+            className="absolute top-0 bottom-0 w-px pointer-events-none"
+            style={{ left: TODAY_IDX * COL_WIDTH + COL_WIDTH / 2, background: 'var(--color-primary)', opacity: 0.5 }}
+          />
+          {events.map((event) => {
+            const { startIdx, endIdx } = getEventColumns(event, days);
+            const spanWidth = (endIdx - startIdx + 1) * COL_WIDTH;
+            const isExternal = event.redirect_to_external && !!event.external_link;
+            const href = (isExternal && event.external_link) || postHref(event.type, event.slug);
 
-          const cardContent = (
-            <article
-              className="h-12 border bg-card px-2 py-1 whitespace-nowrap flex flex-col justify-center"
-              style={{ minWidth: spanWidth }}
-            >
-              <p className="text-sm font-semibold leading-snug">{event.title}</p>
-              <DaysLabel endDate={event.end_date} />
-            </article>
-          );
+            const cardContent = (
+              <article
+                className="h-12 border bg-card px-2 py-1 whitespace-nowrap flex flex-col justify-center"
+                style={{ minWidth: spanWidth }}
+              >
+                <p className="text-sm font-semibold leading-snug">{event.title}</p>
+                <DaysLabel startDate={event.start_date} endDate={event.end_date} />
+              </article>
+            );
 
-          return (
-            <div key={event.id} className="relative" style={{ height: 58 }}>
-              <div className="absolute" style={{ top: 5, left: startIdx * COL_WIDTH }}>
-                {isExternal ? (
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="block focus:outline-none">
-                    {cardContent}
-                  </a>
-                ) : (
-                  <Link href={href} className="block focus:outline-none">
-                    {cardContent}
-                  </Link>
-                )}
+            return (
+              <div key={event.id} className="relative" style={{ height: 58 }}>
+                <div className="absolute" style={{ top: 5, left: startIdx * COL_WIDTH }}>
+                  {isExternal ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="block focus:outline-none">
+                      {cardContent}
+                    </a>
+                  ) : (
+                    <Link href={href} className="block focus:outline-none">
+                      {cardContent}
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );
