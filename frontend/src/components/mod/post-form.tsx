@@ -74,8 +74,8 @@ export function PostForm({
       ...defaultValues,
       // Convert UTC ISO strings from the API to Moscow-time datetime-local values
       // so the datetime-local inputs display and accept Moscow time.
-      start_date: defaultValues?.start_date ? toDatetimeLocal(defaultValues.start_date) : (defaultValues?.start_date ?? null),
-      end_date: defaultValues?.end_date ? toDatetimeLocal(defaultValues.end_date) : (defaultValues?.end_date ?? null),
+      ...(defaultValues?.start_date != null && { start_date: toDatetimeLocal(defaultValues.start_date) }),
+      ...(defaultValues?.end_date != null && { end_date: toDatetimeLocal(defaultValues.end_date) }),
     },
   });
 
