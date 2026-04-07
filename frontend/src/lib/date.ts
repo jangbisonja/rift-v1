@@ -48,6 +48,33 @@ export function daysRemaining(endDateStr: string): number {
 }
 
 /**
+ * Converts a UTC ISO string from the API to a datetime-local input value in Moscow time.
+ * e.g. "2026-04-11T06:32:00+00:00" → "2026-04-11T09:32"
+ */
+export function toDatetimeLocal(isoStr: string): string {
+  const date = new Date(isoStr)
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Moscow",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date)
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "00"
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`
+}
+
+/**
+ * Converts a datetime-local input value (interpreted as Moscow time, UTC+3) to a UTC ISO string.
+ * e.g. "2026-04-11T09:32" → "2026-04-11T06:32:00.000Z"
+ */
+export function fromDatetimeLocal(localStr: string): string {
+  return new Date(localStr + ":00+03:00").toISOString()
+}
+
+/**
  * Return today's date as "YYYY-MM-DD" in Moscow timezone (UTC+3, no DST).
  * Used to anchor the Timeline component's 61-day window.
  */

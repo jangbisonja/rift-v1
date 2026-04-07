@@ -99,6 +99,20 @@ and import the class under `if TYPE_CHECKING:`. This is safe — SQLAlchemy reso
 relationships via the string argument to `relationship("Post", ...)` at runtime,
 not through the type annotation.
 
+**UTC timezone enforcement at the connection level**
+The VPS server timezone may not be UTC. To guarantee all timestamps are stored
+and returned as UTC, `create_async_engine` in `src/database.py` passes
+`connect_args={"options": "-c timezone=UTC"}`. This forces every PostgreSQL
+session opened by the pool to run with `timezone=UTC`, regardless of the OS
+or `postgresql.conf` setting.
+
+**Timezone-aware validation on PostCreate / PostUpdate**
+Pydantic v2 silently accepts naive datetime strings (no `+00:00` suffix) for
+`datetime` fields. To catch frontend mistakes early, `PostCreate` and
+`PostUpdate` both declare a `@field_validator("start_date", "end_date",
+mode="after")` that raises `ValueError` if `tzinfo is None`. The frontend
+must always send ISO-8601 strings with a UTC offset (e.g. `2024-01-01T00:00:00Z`).
+
 ## Docs Maintenance
 
 **You must keep docs in sync with code. No exceptions.**

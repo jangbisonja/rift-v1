@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { listTags } from "@/lib/api/client";
 import { mediaUrl } from "@/lib/media";
+import { toDatetimeLocal, fromDatetimeLocal } from "@/lib/date";
 import { ImagePlus, X } from "lucide-react";
 
 interface PostFormProps {
@@ -71,6 +72,10 @@ export function PostForm({
       external_link: null,
       redirect_to_external: false,
       ...defaultValues,
+      // Convert UTC ISO strings from the API to Moscow-time datetime-local values
+      // so the datetime-local inputs display and accept Moscow time.
+      start_date: defaultValues?.start_date ? toDatetimeLocal(defaultValues.start_date) : (defaultValues?.start_date ?? null),
+      end_date: defaultValues?.end_date ? toDatetimeLocal(defaultValues.end_date) : (defaultValues?.end_date ?? null),
     },
   });
 
@@ -106,6 +111,17 @@ export function PostForm({
   const showPromoCode = selectedType === "PROMO";
   const showExternalLink = selectedType === "EVENT";
 
+  async function handleFormSubmit(data: PostCreate) {
+    // Convert datetime-local values (YYYY-MM-DDTHH:MM, Moscow time) back to UTC ISO strings
+    // before sending to the API. Null values are passed through unchanged.
+    const payload: PostCreate = {
+      ...data,
+      start_date: data.start_date ? fromDatetimeLocal(data.start_date) : null,
+      end_date: data.end_date ? fromDatetimeLocal(data.end_date) : null,
+    };
+    return onSubmit(payload);
+  }
+
   async function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !onCoverUpload) return;
@@ -126,7 +142,7 @@ export function PostForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Type — always first */}
       <div>
         <label className="block text-sm font-medium mb-1.5">Type</label>

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.posts.constants import PostStatus, PostType
 from src.tags.schemas import TagRead
@@ -20,6 +20,13 @@ class PostCreate(BaseModel):
     promo_code: str | None = None
     external_link: str | None = None
     redirect_to_external: bool = False
+
+    @field_validator("start_date", "end_date", mode="after")
+    @classmethod
+    def _require_timezone_aware(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is None:
+            raise ValueError("datetime must be timezone-aware (UTC expected)")
+        return v
 
     @model_validator(mode="after")
     def _require_title_for_non_promo(self) -> "PostCreate":
@@ -40,6 +47,13 @@ class PostUpdate(BaseModel):
     promo_code: str | None = None
     external_link: str | None = None
     redirect_to_external: bool | None = None
+
+    @field_validator("start_date", "end_date", mode="after")
+    @classmethod
+    def _require_timezone_aware(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is None:
+            raise ValueError("datetime must be timezone-aware (UTC expected)")
+        return v
 
 
 class MediaRead(BaseModel):
