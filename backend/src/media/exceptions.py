@@ -11,7 +11,7 @@ class MediaNotFound(HTTPException):
 class InvalidFileType(HTTPException):
     def __init__(self):
         super().__init__(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid file type. Allowed: JPEG, PNG, WebP, GIF",
         )
 

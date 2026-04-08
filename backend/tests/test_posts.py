@@ -89,6 +89,29 @@ async def test_delete_post(client: AsyncClient, auth_headers: dict):
     assert resp.status_code == 204
 
 
+async def test_update_post_clear_date(client: AsyncClient, auth_headers: dict):
+    """Prove that model_dump(exclude_unset=True) allows explicit null-setting."""
+    post_data = {
+        **make_post(),
+        "end_date": "2099-12-31T00:00:00Z",
+    }
+    create = await client.post("/posts", json=post_data, headers=auth_headers)
+    assert create.status_code == 201
+    post_id = create.json()["id"]
+    assert create.json()["end_date"] is not None
+
+    resp = await client.put(
+        f"/posts/{post_id}",
+        json={"end_date": None},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["end_date"] is None
+
+    # cleanup
+    await client.delete(f"/posts/{post_id}", headers=auth_headers)
+
+
 async def test_delete_post_unauthorized(client: AsyncClient):
     resp = await client.delete("/posts/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 401
