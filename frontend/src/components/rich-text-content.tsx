@@ -9,13 +9,7 @@
  *         and the Image extension.
  */
 
-interface TipTapNode {
-  type: string;
-  text?: string;
-  content?: TipTapNode[];
-  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
-  attrs?: Record<string, unknown>;
-}
+import type { TipTapDoc, TipTapNode } from "@/types/tiptap";
 
 function esc(str: string): string {
   return str
@@ -90,13 +84,13 @@ function renderText(node: TipTapNode): string {
 }
 
 interface RichTextContentProps {
-  content: Record<string, unknown>;
+  content: TipTapDoc;
 }
 
 export function RichTextContent({ content }: RichTextContentProps) {
   let html = "";
   try {
-    html = renderNode(content as unknown as TipTapNode);
+    html = renderNode(content);
   } catch {
     html = "";
   }

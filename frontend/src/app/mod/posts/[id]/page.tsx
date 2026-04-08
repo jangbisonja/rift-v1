@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/mod/confirm-dialog";
 import { Breadcrumbs } from "@/components/mod/breadcrumbs";
 import { useParams } from "next/navigation";
-import type { PostCreate } from "@/lib/schemas";
+import type { PostCreate, PostUpdate } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { mediaUrl } from "@/lib/media";
@@ -43,7 +43,11 @@ export default function EditPostPage() {
   });
 
   const updateMut = useMutation({
-    mutationFn: (data: PostCreate) => updatePost(id, data, token),
+    mutationFn: (data: PostCreate) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { type: _type, ...payload } = data;
+      return updatePost(id, payload as PostUpdate, token);
+    },
     onSuccess: (updated) => {
       qc.setQueryData(["post", id], updated);
       qc.invalidateQueries({ queryKey: ["posts"] });

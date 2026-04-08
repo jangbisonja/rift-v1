@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MediaPickerModal } from "@/components/mod/media-picker-modal";
 import type { MediaRead } from "@/lib/schemas";
+import type { TipTapDoc } from "@/types/tiptap";
 
 interface RichEditorProps {
-  value?: Record<string, unknown>;
-  onChange?: (value: Record<string, unknown>) => void;
+  value?: TipTapDoc;
+  onChange?: (value: TipTapDoc) => void;
   /** Upload a file and return the URL to insert. If provided, shows upload button. */
   onUploadImage?: (file: File) => Promise<string>;
   /** Media items available to pick from (post's attached media). */
@@ -29,7 +30,7 @@ export function RichEditor({ value, onChange, onUploadImage, mediaLibrary }: Ric
     extensions: [StarterKit, Image],
     content: value ?? { type: "doc", content: [] },
     onUpdate({ editor }) {
-      onChange?.(editor.getJSON() as Record<string, unknown>);
+      onChange?.(editor.getJSON() as TipTapDoc);
     },
   });
 

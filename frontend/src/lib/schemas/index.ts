@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { TipTapDoc } from "@/types/tiptap";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export const PostSchema = z.object({
   status: PostStatus,
   title: z.string(),
   slug: z.string(),
-  content: z.record(z.string(), z.unknown()),
+  content: z.record(z.string(), z.unknown()) as unknown as z.ZodType<TipTapDoc>,
   post_metadata: z.record(z.string(), z.unknown()),
   created_at: z.string(),
   updated_at: z.string().nullable(),
@@ -96,7 +97,7 @@ export const PostCreateSchema = z.object({
   type: PostType,
   // PROMO posts have no title — allow empty; non-PROMO validated below
   title: z.string().max(256).default(""),
-  content: z.record(z.string(), z.unknown()).default({ type: "doc", content: [] }),
+  content: (z.record(z.string(), z.unknown()) as unknown as z.ZodType<TipTapDoc>).default({ type: "doc", content: [] }),
   post_metadata: z.record(z.string(), z.unknown()).default({}),
   tag_ids: z.array(z.string().uuid()).default([]),
   cover_media_id: z.string().uuid().nullable().default(null),
@@ -106,6 +107,7 @@ export const PostCreateSchema = z.object({
   external_link: z.string().nullable().default(null),
   redirect_to_external: z.boolean().default(false),
 }).superRefine((data, ctx) => {
+  // Title required for all types except PROMO
   if (data.type !== "PROMO" && !data.title) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -113,10 +115,27 @@ export const PostCreateSchema = z.object({
       path: ["title"],
     });
   }
+
+  // For EVENT and PROMO: end_date must be after start_date when both are set
+  if (
+    (data.type === "EVENT" || data.type === "PROMO") &&
+    data.start_date &&
+    data.end_date
+  ) {
+    const start = new Date(data.start_date);
+    const end = new Date(data.end_date);
+    if (end <= start) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End date must be after start date",
+        path: ["end_date"],
+      });
+    }
+  }
 });
 export type PostCreate = z.infer<typeof PostCreateSchema>;
 
-export const PostUpdateSchema = PostCreateSchema;
+export const PostUpdateSchema = PostCreateSchema.omit({ type: true });
 export type PostUpdate = z.infer<typeof PostUpdateSchema>;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

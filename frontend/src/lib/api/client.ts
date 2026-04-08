@@ -22,10 +22,15 @@ interface RequestOptions {
   revalidate?: number | false;
 }
 
+export type ApiErrorDetail =
+  | string
+  | Array<{ loc: string[]; msg: string; type: string }>;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public detail?: ApiErrorDetail,
   ) {
     super(message);
     this.name = "ApiError";
@@ -58,8 +63,18 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, fetchOptions);
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new ApiError(res.status, `${res.status} ${res.statusText}: ${body}`);
+    let detail: ApiErrorDetail | undefined;
+    let message = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.detail !== undefined) {
+        detail = body.detail as ApiErrorDetail;
+        message = typeof detail === "string" ? detail : message;
+      }
+    } catch {
+      // non-JSON error body — keep default message
+    }
+    throw new ApiError(res.status, message, detail);
   }
 
   if (res.status === 204) return undefined as T;
@@ -79,8 +94,18 @@ export async function loginBackend(
     body: body.toString(),
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError(res.status, text || "Login failed");
+    let detail: ApiErrorDetail | undefined;
+    let message = "Login failed";
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") {
+        detail = body.detail;
+        message = body.detail;
+      }
+    } catch {
+      // non-JSON body
+    }
+    throw new ApiError(res.status, message, detail);
   }
   return res.json();
 }
@@ -177,8 +202,18 @@ export async function uploadMedia(file: File, token: string): Promise<Media> {
     body: form,
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError(res.status, text || "Upload failed");
+    let detail: ApiErrorDetail | undefined;
+    let message = "Upload failed";
+    try {
+      const body = await res.json();
+      if (body?.detail !== undefined) {
+        detail = body.detail as ApiErrorDetail;
+        message = typeof detail === "string" ? detail : message;
+      }
+    } catch {
+      // non-JSON body
+    }
+    throw new ApiError(res.status, message, detail);
   }
   return res.json();
 }

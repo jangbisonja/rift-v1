@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CoverImage } from "@/components/cover-image";
-import { formatDate, getPostPhase } from "@/lib/date";
+import { DaysLabel } from "@/components/days-label";
+import { formatDate } from "@/lib/date";
 import type { PostListItem } from "@/lib/schemas";
 
 interface PostRowItemProps {
@@ -10,25 +11,6 @@ interface PostRowItemProps {
 }
 
 const cardClass = "flex gap-4 overflow-hidden border bg-card p-3 transition-shadow group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-ring";
-
-function EventPhaseLabel({ startDate, endDate }: { startDate: string | null; endDate: string | null }) {
-  const phase = getPostPhase(startDate, endDate);
-  switch (phase.kind) {
-    case "indefinite":
-    case "active_indefinite":
-      return <span className="text-xs text-muted-foreground">Бессрочно</span>;
-    case "upcoming":
-      return <span className="text-xs text-muted-foreground">Начнётся через {phase.days} дней</span>;
-    case "starting_today":
-      return <span className="text-xs text-yellow-500">Начинается сегодня</span>;
-    case "active":
-      return <span className="text-xs text-muted-foreground">Осталось {phase.days} дней</span>;
-    case "expiring_today":
-      return <span className="text-xs text-yellow-500">Истекает сегодня</span>;
-    case "expired":
-      return <span className="text-xs text-destructive">Истёк {phase.days} дней назад</span>;
-  }
-}
 
 function CardContent({ post }: { post: PostListItem }) {
   return (
@@ -52,7 +34,7 @@ function CardContent({ post }: { post: PostListItem }) {
         )}
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{post.title}</h3>
         {post.type === "EVENT" ? (
-          <EventPhaseLabel startDate={post.start_date} endDate={post.end_date} />
+          <DaysLabel startDate={post.start_date} endDate={post.end_date} className="text-xs" />
         ) : (
           post.excerpt && (
             <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">{post.excerpt}…</p>

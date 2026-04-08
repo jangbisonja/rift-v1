@@ -2,15 +2,19 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import { getPostPhase } from "@/lib/date";
+import { DaysLabel } from "@/components/days-label";
 import { postHref } from "@/lib/post-href";
 import type { PostListItem } from "@/lib/schemas";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COL_WIDTH = 32;   // px per day column
-const TOTAL_COLS = 61;  // 60-day window + 1: today is at index 29
-const TODAY_IDX = 29;
+const TIMELINE_CONFIG = {
+  COL_WIDTH: 32,     // px per day column
+  TOTAL_COLS: 61,    // 60-day window + 1
+  TODAY_IDX: 29,     // today sits at column index 29 (30 back, today, 30 forward)
+} as const;
+
+const { COL_WIDTH, TOTAL_COLS, TODAY_IDX } = TIMELINE_CONFIG;
 const STRIP_WIDTH = TOTAL_COLS * COL_WIDTH; // 1952px
 
 const DOW_ABBRS = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
@@ -70,27 +74,6 @@ function getEventColumns(event: PostListItem, days: Date[]): { startIdx: number;
 
   if (startIdx > endIdx) endIdx = startIdx;
   return { startIdx, endIdx };
-}
-
-// ─── DaysLabel ────────────────────────────────────────────────────────────────
-
-function DaysLabel({ startDate, endDate }: { startDate: string | null; endDate: string | null }) {
-  const phase = getPostPhase(startDate, endDate);
-  switch (phase.kind) {
-    case "indefinite":
-    case "active_indefinite":
-      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Бессрочно</span>;
-    case "upcoming":
-      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Начнётся через {phase.days} дней</span>;
-    case "starting_today":
-      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Начинается сегодня</span>;
-    case "active":
-      return <span className="text-xs text-muted-foreground" suppressHydrationWarning>Осталось {phase.days} дней</span>;
-    case "expiring_today":
-      return <span className="text-xs text-yellow-500" suppressHydrationWarning>Истекает сегодня</span>;
-    case "expired":
-      return <span className="text-xs text-destructive" suppressHydrationWarning>Истёк {phase.days} дней назад</span>;
-  }
 }
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
@@ -169,7 +152,7 @@ export function Timeline({ events, today }: TimelineProps) {
                 style={{ minWidth: spanWidth }}
               >
                 <p className="text-sm font-semibold leading-snug">{event.title}</p>
-                <DaysLabel startDate={event.start_date} endDate={event.end_date} />
+                <DaysLabel startDate={event.start_date} endDate={event.end_date} className="text-xs" />
               </article>
             );
 

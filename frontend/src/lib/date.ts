@@ -128,17 +128,8 @@ export function fromDatetimeLocal(localStr: string): string {
 /**
  * Return today's date as "YYYY-MM-DD" in Moscow timezone (UTC+3, no DST).
  * Used to anchor the Timeline component's 61-day window.
+ * Delegates to getMoscowTodayDateStr() for locale consistency (sv-SE, native ISO format).
  */
 export function getMoscowTodayStr(): string {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Moscow",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const y = parts.find(p => p.type === "year")!.value;
-  const m = parts.find(p => p.type === "month")!.value;
-  const d = parts.find(p => p.type === "day")!.value;
-  return `${y}-${m}-${d}`;
+  return getMoscowTodayDateStr();
 }

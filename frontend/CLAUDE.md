@@ -160,6 +160,12 @@ Per-category layout specs (cards, homepage blocks, archive pages): `frontend/doc
 
 ## Design Decisions
 
+**TipTap document types — `src/types/tiptap.ts`**
+Structural types (`TipTapDoc`, `TipTapNode`, `TipTapMark`) live in `src/types/tiptap.ts`.
+`RichTextContentProps.content` is typed as `TipTapDoc`. The Zod runtime schema
+(`z.record(z.string(), z.unknown())`) retains loose validation since deep recursive
+JSON validation is impractical; TypeScript safety is added via `as unknown as z.ZodType<TipTapDoc>` cast.
+
 **Font**: Nunito Sans (Google Fonts) via `next/font/google`. Variable `--font-nunito-sans`
 set on `<html>` element (not `<body>`) so CSS inheritance works correctly.
 
@@ -200,6 +206,26 @@ The edit page is the primary place users land after creating a post, so status c
 
 ## Known Solutions
 
+**`PostUpdateSchema` omits `type` — post type is immutable after creation**
+`PostUpdateSchema = PostCreateSchema.omit({ type: true })`. Sending `type` in a PUT request
+would silently change a NEWS post to a PROMO, breaking slugs, routing, and display logic.
+`PostForm` uses `PostCreate` as its form state (so it always knows the type for field
+visibility). Admin edit pages omit `type` when calling `updatePost()` — the form type and
+the API payload type are intentionally different.
+
+**`ApiError` carries structured `detail` for FastAPI error responses**
+FastAPI returns `{"detail": "..."}` (string) or `{"detail": [{loc, msg, type}]}` (array) for 422.
+`ApiError.detail: ApiErrorDetail` captures the parsed value. In admin forms, inspect `error.detail`:
+if it's an array, iterate and call `form.setError(loc.at(-1), { message: msg })` for each item.
+If it's a string, show it as a toast or form-level error. The `message` field always has a
+human-readable fallback regardless of `detail` shape.
+
+**`getMoscowTodayStr()` delegates to `getMoscowTodayDateStr()`**
+Both functions produce `YYYY-MM-DD` in Moscow time. The private `getMoscowTodayDateStr()` uses
+`sv-SE` locale (native ISO format). `getMoscowTodayStr()` (public, used by `Timeline`) was
+previously duplicating this with `en-CA` + `formatToParts` — unnecessary verbosity. Fix: delegate
+directly. If you need to add a third call site, use `getMoscowTodayStr()` — do not add a third locale.
+
 **Next.js 16: all request-time APIs are async**
 `cookies()`, `headers()`, `params`, `searchParams` — always `await` them.
 
@@ -225,11 +251,12 @@ the font silently falls back. Always apply font variable classNames to `<html>`.
 - `z.record(z.unknown())` → `z.record(z.string(), z.unknown())` (key schema required)
 - `z.string().datetime()` → removed; use plain `z.string()`
 
-**`next/image` with localhost backend — private IP block**
-Next.js 15/16 blocks image optimization requests that resolve to private IPs (127.0.0.1).
-`remotePatterns` alone is not enough. Fix: `images: { unoptimized: true }` in `next.config.ts`.
-This is fine because the backend already converts all uploads to WebP.
-In production with a public hostname, switch back to `remotePatterns`.
+**`next/image` — dev vs production image config**
+Next.js 15/16 blocks image optimization for private IPs (127.0.0.1/localhost). In development:
+`images: { unoptimized: true }`. In production: `remotePatterns` with the hostname extracted
+from `NEXT_PUBLIC_API_URL` at build time. The hostname parsing uses a try/catch with a
+"localhost" fallback. Do not set `unoptimized: true` globally — it disables srcset and lazy
+loading in production where they add value.
 
 **TipTap `useEditor` — must set `immediatelyRender: false` in Next.js**
 Without this flag, TipTap detects SSR and throws a hydration mismatch error on client
@@ -345,6 +372,154 @@ The old `daysRemaining(endDate)` helper is replaced by `getPostPhase(startDate, 
 timestamps can differ, causing React error #418 (text node mismatch). Fix: add
 `suppressHydrationWarning` to every `<span>` that renders dynamic date text.
 This applies to both `timeline.tsx` and `promo-item.tsx`.
+
+**Shared `DaysLabel` component — `src/components/days-label.tsx`**
+`getPostPhase(startDate, endDate)` is rendered identically across post-detail, post-row-item,
+timeline, and promo-item. All callers pass `className="text-xs"` except post-detail (inherits
+from parent). `suppressHydrationWarning` is required on every span because `getPostPhase()`
+calls `new Date()` at render time, causing a server/client text node mismatch (React error #418).
+The component is a Server Component — no `"use client"` needed since it has no state or browser APIs.
+
+**PromoItem clipboard island — `src/components/promo-copy-button.tsx`**
+`PromoItem` is a Server Component. Only the copy-to-clipboard interaction requires a client
+boundary — extracted into `PromoCopyButton` (accepts `promoCode: string`). This is the
+`"use client"` push-down pattern: isolate browser API usage into the smallest possible subtree.
+
+**Timeline layout constants — `TIMELINE_CONFIG` object in `timeline.tsx`**
+`COL_WIDTH`, `TOTAL_COLS`, and `TODAY_IDX` are interdependent (STRIP_WIDTH = TOTAL_COLS × COL_WIDTH;
+TODAY_IDX must satisfy TODAY_IDX < TOTAL_COLS). Grouping them in `TIMELINE_CONFIG as const` makes
+the dependency explicit and prevents silent drift. Destructured at usage so the rest of the file
+reads unchanged.
+
+## Module Addition & UI Extension Protocol
+
+Mandatory checklist. Every step must be completed in order. No skipping.
+
+### 0. Pre-work (every change)
+
+- [ ] Read `API_CONTRACT.md` — never assume a field or endpoint exists
+- [ ] Read the existing components you are touching before writing anything
+- [ ] Check `src/components/ui/` for a shadcn primitive that already covers the need
+- [ ] Check **Design Decisions** in this file for established patterns
+
+### 1. API Alignment — contract first
+
+For any new data display or mutation:
+
+- [ ] Confirm the endpoint exists in `API_CONTRACT.md`
+- [ ] Add or update the Zod schema in `src/lib/schemas/index.ts` to mirror the response shape exactly
+- [ ] Add the typed fetch function to `src/lib/api/client.ts`
+- [ ] If a new field is needed: update `API_CONTRACT.md` first, then the backend, then the schema — never the other way around
+
+Write schemas before components. Never write a component that uses a type you invented.
+
+### 2. New public section or post type
+
+**If adding a new PostType value:**
+- [ ] Add to `PostType` enum in backend `src/posts/models.py` + Alembic migration
+- [ ] Update `API_CONTRACT.md` with the new type and any type-specific fields
+- [ ] Add the new value to `PostType` in `src/lib/schemas/index.ts`
+- [ ] Add the URL mapping to `postHref()` in `src/lib/post-href.ts`
+
+**For every new public section (with or without a new PostType):**
+- [ ] Create `src/app/(public)/[section]/page.tsx` — archive/listing page
+- [ ] Create `src/app/(public)/[section]/[slug]/page.tsx` — detail page
+- [ ] Wrap every page in `PageContainer` — never hardcode `max-w-7xl`; never bypass it
+- [ ] Add the section link to `src/components/nav.tsx` (desktop list + mobile menu — both)
+- [ ] Add a homepage block to `src/app/(public)/page.tsx` if the section needs homepage presence; only render when content exists (non-empty array guard); respect block order: News+Promos | Events | Articles
+- [ ] Add the type to the `BACK` and `TYPE_LABEL` maps in `src/components/post-detail.tsx`
+- [ ] Update the **Structure** tree in this file
+- [ ] Update the **Post type → URL mapping** table in this file
+
+### 3. New admin section
+
+- [ ] Create `src/app/mod/[section]/page.tsx` — list/index view
+- [ ] Create `src/app/mod/[section]/[id]/page.tsx` — edit view (if needed)
+- [ ] Add a sidebar link in `src/components/mod/sidebar.tsx`
+- [ ] Data fetching: `useQuery` for reads, `useMutation` for writes (TanStack Query)
+- [ ] Token: always via `useToken()` from `src/components/mod/token-context.tsx`
+- [ ] Invalidate affected query keys on every mutation success — never leave stale cache
+- [ ] Update the **Structure** tree in this file
+
+### 4. Layout sync rules
+
+**Nav (`src/components/nav.tsx`):**
+- Nav links are section-level only: `/news`, `/articles`, `/events`, `/promos`
+- Every new top-level public section gets a link in both desktop and mobile menus
+- Keep link order consistent with homepage block order
+
+**Homepage (`src/app/(public)/page.tsx`):**
+- One block per content type; block only renders when its data array is non-empty
+- Block order: News+Promos | Events | Articles — do not reorder unless explicitly instructed
+- New sections append after Articles unless the design specifies otherwise
+
+**PageContainer:**
+- Source: `src/components/page-container.tsx` (`max-w-7xl px-4 py-10`)
+- Required on every public page and post detail — no exceptions
+- Admin pages use the mod layout (`sidebar + flex-1` content area from `mod/layout.tsx`) — do not use PageContainer in admin
+
+### 5. Design tokens
+
+**Color:**
+- Use Tailwind semantic classes only: `bg-primary`, `text-muted-foreground`, `border-input`, `bg-card`, `bg-destructive`, `bg-background`, `text-foreground`
+- Opacity modifiers: `bg-primary/10` — never custom rgba
+- Status-indicator exceptions allowed: `text-yellow-500` (warning), `text-green-500` (success), `text-destructive` (error)
+- Never hardcode hex, RGB, or oklch values in component files — those belong in `globals.css` as CSS custom properties only
+
+**Typography:**
+- Body: inherit; do not set font-size on containers unless overriding prose
+- Russian UI copy: always `ru-RU`; dates always via `formatDate()` from `src/lib/date.ts`
+- Rich text containers: always include `dark:prose-invert` alongside `prose`
+
+**Dark mode:**
+- Every class must work in both light and dark — use `dark:` only when the base semantic class is insufficient
+- Never use `dark:bg-[#...]` with hardcoded values
+
+**Spacing/sizing:**
+- Tailwind spacing scale only (multiples of 4px)
+- Avoid arbitrary values like `w-[137px]` unless implementing pixel-precise layout
+- Any pixel-precise layout constants belong in a `CONFIG as const` object (pattern: `TIMELINE_CONFIG` in `timeline.tsx`) — never inline magic numbers
+
+### 6. Component choice — decision tree
+
+Run these checks in order before creating anything:
+
+1. **Does `src/components/ui/` have it?** → Use it. Never re-implement Button, Badge, Dialog, Select, etc.
+2. **Display only, no state, no browser APIs?** → Server Component. No `"use client"`.
+3. **Needs state or browser APIs?** → Find the smallest possible subtree and add `"use client"` only there (island pattern — see `PromoCopyButton`). The parent stays a Server Component.
+4. **Same rendering logic in 2+ places?** → Extract to `src/components/` shared component immediately. Do not defer. (Lesson: `DaysLabel` was duplicated across 4 files before extraction.)
+5. **Admin-only?** → `src/components/mod/`
+6. **Icons:** `lucide-react` named imports only — `import { Sun } from 'lucide-react'`. No other icon library.
+7. **Animation:** Tailwind transitions only (`transition-colors`, `transition-opacity`). No Framer Motion without explicit approval.
+
+### 7. Schema and type discipline
+
+- All Zod schemas: `src/lib/schemas/index.ts` — one file
+- `PostCreateSchema` and `PostUpdateSchema` are **separate** — `PostUpdate` omits `type` (`type` is immutable after creation)
+- New field in a schema: update Zod schema + TS type + every component consuming that type — no partial updates
+- TipTap content: always `TipTapDoc` from `src/types/tiptap.ts` — never `Record<string, unknown>`
+- Never widen a type to silence a compiler error — fix the root cause
+
+### 8. Error handling
+
+- `ApiError` carries a structured `detail` field: `string` for simple errors, `Array<{loc, msg}>` for FastAPI field-level validation errors
+- In admin forms: catch `ApiError`, inspect `error.detail`, call `form.setError("fieldName", { message })` for field-level errors — surface them inline, not just in a toast
+- In public pages: `console.error` + graceful fallback UI — never crash the page
+- Never swallow errors silently anywhere
+
+### 9. Documentation sync — mandatory
+
+| Trigger | Action |
+|---|---|
+| New public route | Update **Structure** tree in this file |
+| New admin route | Update **Structure** tree in this file |
+| New post type | Update `API_CONTRACT.md` + **Post type → URL mapping** table in this file |
+| New component with non-obvious pattern | Add to **Design Decisions** in this file |
+| New gotcha or workaround | Add to **Known Solutions** in this file |
+| New or changed API endpoint | Update `API_CONTRACT.md` (SSOT) — never restate in domain files |
+| New nav link | Update the nav link comment in `nav.tsx` listing all current links |
+
+---
 
 ## TODO.md
 
