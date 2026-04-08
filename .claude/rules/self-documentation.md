@@ -12,3 +12,16 @@ What to record:
 - Library version quirks or gotchas discovered during development
 - Constraints imposed by the stack or environment
 - Decisions that look wrong but are intentional
+
+## Pre-Implementation Check
+
+Before writing code that touches business logic, read `RULES.md` at the project root.
+If your implementation would violate any numbered rule, stop and raise the conflict
+with the user. Do not silently work around a rule.
+
+## Module Spec Format
+
+When documenting a new complex module in `*/docs/`, use this structure:
+Purpose → Inputs → Outputs → Algorithm (decision table, not prose) →
+Boundaries (MUST use / MUST NOT use / MUST NOT invent) →
+Integration Points (exact file paths) → Applicable RULES.md numbers.

@@ -10,6 +10,7 @@ Follow conventions exactly — do not invent patterns.
 - `backend/docs/ARCHITECTURE.md` — system design, layers, DB schema, auth model
 - `backend/docs/MODULES.md` — per-module purpose, endpoints, design decisions
 - `backend/docs/fastapi/AGENTS.md` — FastAPI patterns and examples
+- `../RULES.md` — business invariants (timezone, post type rules, media, auth, pagination)
 
 ## Stack
 

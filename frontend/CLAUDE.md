@@ -7,6 +7,7 @@ Follow conventions exactly — do not invent patterns.
 
 **Before writing code, read:**
 - `../API_CONTRACT.md` — shared API contract (data shapes, endpoints, auth flow)
+- `../RULES.md` — business invariants (timezone, post type rules, media, auth, pagination)
 
 ## Stack
 

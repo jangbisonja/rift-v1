@@ -35,6 +35,8 @@ Act as senior frontend developer. See `frontend/CLAUDE.md` for full instructions
 | `DEPLOY.md` | Operational runbook — infrastructure, routing, deploy commands, pm2. |
 | `.claude/rules/collaboration.md` | Communication style (applies to all agents). |
 | `.claude/rules/self-documentation.md` | When and how to record non-obvious decisions (applies to all agents). |
+| `RULES.md` | Business invariants — timezone, post types, media, auth, pagination. Both layers must comply. |
+| `docs/ROADMAP.md` | Post-MVP feature goals and phase tracking. Links to module specs in `docs/`. |
 
 ## Documentation Boundaries
 
