@@ -405,6 +405,40 @@ column indices for any given event. The `today` string (Moscow time, `YYYY-MM-DD
 provided by the parent via `getMoscowTodayStr()` — the Timeline component itself never
 calls `new Date()`.
 
+**`export const revalidate` is not in the v16 route segment config table**
+`revalidate`, `dynamic`, and `fetchCache` were removed from the route segment config options
+in Next.js v16.0.0 — but only when `cacheComponents` is enabled in `next.config.ts`. We do
+NOT enable `cacheComponents`, so `export const revalidate = 60` still works on all public
+pages and will continue to do so.
+Do not add `cacheComponents: true` to `next.config.ts` without reading the official
+"Caching and Revalidating (Previous Model)" migration guide. The new alternatives are
+`cacheLife()` and `cacheTag()` from `next/cache`. Until a migration is needed, keep using
+`revalidate = 60` on all public listing and detail pages.
+
+**`proxy.ts` does not protect Server Functions (Server Actions)**
+The official docs explicitly warn: "Always verify authentication and authorization inside
+each Server Function rather than relying on Proxy alone." A Proxy matcher that covers a page
+route does NOT intercept `POST` requests to Server Functions defined on that page — they are
+handled as a separate POST to the same route and bypass Proxy matching.
+Rift currently has no Server Functions. If any are added (e.g., `'use server'` form actions),
+each function must verify the token internally — do not rely on `proxy.ts` for their protection.
+
+**`PageProps<'/route/[slug]'>` — strongly typed page props in Next.js 16**
+Next.js 16 provides a globally available `PageProps` generic that gives strict typing for
+`params` and `searchParams` — no import needed after running `next build` or `next typegen`.
+```tsx
+// Instead of:
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+
+// You can write:
+export default async function Page(props: PageProps<'/news/[slug]'>) {
+  const { slug } = await props.params
+```
+The route literal (`'/news/[slug]'`) enables autocomplete and prevents typos in param key
+names. It is generated from the file system during `next dev` or `next build`. Static routes
+resolve `params` to `{}`. Either style is correct — use `PageProps` when the stricter typing
+is valuable.
+
 ## Module Addition & UI Extension Protocol
 
 Mandatory checklist. Every step must be completed in order. No skipping.
@@ -415,6 +449,9 @@ Mandatory checklist. Every step must be completed in order. No skipping.
 - [ ] Read the existing components you are touching before writing anything
 - [ ] Check `src/components/ui/` for a shadcn primitive that already covers the need
 - [ ] Check **Design Decisions** in this file for established patterns
+- [ ] **Next.js 16: all request-time APIs are async** — `await params`, `await searchParams`, `await cookies()`, `await headers()` wherever you call them in Server Components or Route Handlers. Never call them synchronously.
+- [ ] **Route protection:** `/mod/*` is auto-covered by `proxy.ts` matcher. If adding a new protected route **outside** `/mod/`, update the `matcher` array in `src/proxy.ts`. Never create a second middleware/proxy file.
+- [ ] **Server Functions / Server Actions:** if adding `'use server'` functions, do NOT rely on `proxy.ts` for auth. Verify the token inside each Server Function — the proxy does not intercept Server Function POST requests.
 
 ### 1. API Alignment — contract first
 
@@ -442,11 +479,16 @@ Write schemas before components. Never write a component that uses a type you in
 - [ ] Add the section link to `src/components/nav.tsx` (desktop list + mobile menu — both)
 - [ ] Add a homepage block to `src/app/(public)/page.tsx` if the section needs homepage presence; only render when content exists (non-empty array guard); respect block order: News+Promos | Events | Articles
 - [ ] Add the type to the `BACK` and `TYPE_LABEL` maps in `src/components/post-detail.tsx`
+- [ ] Add `export const revalidate = 60` to every listing page (`[section]/page.tsx`). Detail pages (`[section]/[slug]/page.tsx`) also use `revalidate = 60` unless the content type warrants a different TTL.
+- [ ] Detail page data fetching: use the two-step pattern — `listPosts({ slug })` to get the ID, then `getPost(id)` for the full shape. A direct `GET /posts/slug/{slug}` endpoint does not yet exist (tracked in `backend/docs/ARCHITECTURE.md` § Detail Page Double Fetch).
+- [ ] In dynamic route segments (`[slug]/page.tsx`), always `await params` before accessing `.slug`: `const { slug } = await params`.
+- [ ] Any span that renders output from `getPostPhase()`, `formatDate()`, or any `new Date()` call at render time **must** have `suppressHydrationWarning` — server and client timestamps differ, causing React hydration error #418.
 - [ ] Update the **Structure** tree in this file
 - [ ] Update the **Post type → URL mapping** table in this file
 
 ### 3. New admin section
 
+- [ ] New routes under `/mod/` are automatically protected by the `proxy.ts` matcher (`/mod/:path*`). No proxy changes needed. If you create a protected route outside `/mod/`, update the matcher.
 - [ ] Create `src/app/mod/[section]/page.tsx` — list/index view
 - [ ] Create `src/app/mod/[section]/[id]/page.tsx` — edit view (if needed)
 - [ ] Add a sidebar link in `src/components/mod/sidebar.tsx`
@@ -494,6 +536,12 @@ Write schemas before components. Never write a component that uses a type you in
 - Avoid arbitrary values like `w-[137px]` unless implementing pixel-precise layout
 - Any pixel-precise layout constants belong in a `CONFIG as const` object (pattern: `TIMELINE_CONFIG` in `timeline.tsx`) — never inline magic numbers
 
+**Date and timezone arithmetic:**
+- Never use `new Date(year, month, day)` for calendar logic — this creates local-timezone midnight and produces wrong column placement for visitors outside UTC.
+- Always use `Date.UTC(year, month, day) + offset_ms` for construction and `getUTCDate()`, `getUTCMonth()`, `getUTCDay()` for reading back.
+- `today` context always comes from `getMoscowTodayStr()` in `src/lib/date.ts` — never call `new Date()` directly in a component to get "today".
+- All date-rendering spans (anything that calls `getPostPhase()`, `formatDate()`, or `new Date()` at render time) require `suppressHydrationWarning` to suppress React hydration error #418.
+
 ### 6. Component choice — decision tree
 
 Run these checks in order before creating anything:
@@ -532,6 +580,7 @@ Run these checks in order before creating anything:
 | New gotcha or workaround | Add to **Known Solutions** in this file |
 | New or changed API endpoint | Update `API_CONTRACT.md` (SSOT) — never restate in domain files |
 | New nav link | Update the nav link comment in `nav.tsx` listing all current links |
+| New protected route outside `/mod/*` | Update `matcher` array in `src/proxy.ts` |
 
 ---
 

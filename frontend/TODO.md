@@ -1,3 +1,36 @@
+## Technical Debt
+
+Items identified but deferred. Revisit when the noted trigger is met.
+
+### Field-level error surfacing in admin forms
+`ApiError.detail` is now typed as `string | Array<{loc: string[], msg: string, type: string}>`.
+The infrastructure is in place in `src/lib/api/client.ts`. However, no admin form has been
+updated to use it — `post-form.tsx` and other forms show all errors as generic toasts/messages
+instead of calling `form.setError("fieldName", { message })` for field-level FastAPI validation errors.
+
+**Pattern to implement (per Section 8 of the Module Addition & UI Extension Protocol in CLAUDE.md):**
+```ts
+} catch (err) {
+  if (err instanceof ApiError && Array.isArray(err.detail)) {
+    for (const item of err.detail) {
+      const field = item.loc.at(-1) as string;
+      form.setError(field, { message: item.msg });
+    }
+  }
+}
+```
+**Trigger:** When a second admin is added, or when form validation UX becomes a complaint.
+
+### `listPosts` query param DRY
+`src/lib/api/client.ts` builds query strings with manual `if (params.x) qs.set(...)` chains.
+At 6 params it is borderline; at 10+ it becomes maintenance debt. A typed `toQueryString()`
+utility that iterates defined params and skips `undefined` values would centralise this.
+
+**Trigger:** When `listPosts` grows beyond 8 query parameters, or when a second list endpoint
+with similar params is added.
+
+---
+
 # Rift Frontend — TODO
 
 ## In Progress
