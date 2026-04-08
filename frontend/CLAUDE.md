@@ -65,7 +65,7 @@ frontend/
 │   │   ├── schemas/index.ts            # Zod schemas — PostListItem, Post, Tag, Media, etc.
 │   │   ├── media.ts                    # mediaUrl(path) — prepends NEXT_PUBLIC_API_URL
 │   │   └── post-href.ts               # postHref(type, slug) — maps PostType → URL path
-│   └── middleware.ts                    # protects /mod/* — redirects to /mod/login if no cookie
+│   └── proxy.ts                         # protects /mod/* — redirects to /mod/login if no cookie
 ```
 
 ## Component Boundary Rules
@@ -91,7 +91,7 @@ Flow:
 1. User submits login form → POST `/api/auth/login` (Route Handler)
 2. Route Handler calls `POST /auth/login` on backend
 3. On success, sets `token` as HTTP-only cookie
-4. `middleware.ts` checks for the cookie on every `/mod/*` request — redirects to `/mod/login` if missing
+4. `proxy.ts` checks for the cookie on every `/mod/*` request — redirects to `/mod/login` if missing
 5. Server Components: use `getServerToken()` from `lib/api/server.ts`, pass as `token` option to client
 6. Client Components: `fetch` sends cookie automatically (same origin)
 7. Logout: POST `/api/auth/logout` → clears cookie
@@ -229,11 +229,11 @@ directly. If you need to add a third call site, use `getMoscowTodayStr()` — do
 **Next.js 16: all request-time APIs are async**
 `cookies()`, `headers()`, `params`, `searchParams` — always `await` them.
 
-**Next.js 16: middleware file must be named `middleware.ts`**
-File is `src/middleware.ts`, export named `middleware`. Next.js loads middleware exclusively
-by filename — any other name (e.g. `proxy.ts`) is silently ignored, leaving route protection
-inactive. The matcher config export and `NextRequest`/`NextResponse` API are unchanged from
-earlier versions.
+**Next.js 16: middleware file must be named `proxy.ts`**
+File is `src/proxy.ts`, export named `proxy`. Next.js 16 deprecated the `middleware.ts`
+convention and now expects `proxy.ts` — using `middleware.ts` triggers a build warning and
+will stop working in a future version. The matcher config export and `NextRequest`/
+`NextResponse` API are unchanged.
 
 **Next.js 16: `experimental.turbopack` → top-level `turbopack`**
 Turbopack is default for `next dev` and `next build`. Config moves out of `experimental`.
@@ -259,6 +259,10 @@ Next.js 15/16 blocks image optimization for private IPs (127.0.0.1/localhost). I
 from `NEXT_PUBLIC_API_URL` at build time. The hostname parsing uses a try/catch with a
 "localhost" fallback. Do not set `unoptimized: true` globally — it disables srcset and lazy
 loading in production where they add value.
+`pathname` must include the full public path prefix. Since Nginx routes `v1.kekl.ru/be/` →
+FastAPI and `mediaUrl()` produces `https://v1.kekl.ru/be/uploads/...`, the pattern is
+`"/be/uploads/**"` — not `"/uploads/**"`. Always derive this from the `NEXT_PUBLIC_API_URL`
+path segment, not just its hostname.
 
 **TipTap `useEditor` — must set `immediatelyRender: false` in Next.js**
 Without this flag, TipTap detects SSR and throws a hydration mismatch error on client
