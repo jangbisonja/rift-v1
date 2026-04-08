@@ -124,3 +124,17 @@ The current upload flow reads the entire file into memory (`await file.read()`) 
 **Current mitigation:** The Nginx reverse proxy enforces `client_max_body_size 10m` at the transport layer, rejecting oversized requests before they reach FastAPI.
 **Trigger to revisit:** If the system moves to a multi-admin model, direct S3/object-storage uploads, or accepts uploads from untrusted sources.
 **Migration path:** Replace `await file.read()` with a streaming approach using `file.chunks()` and a running byte counter; raise `FileTooLarge` as soon as the counter exceeds the limit without buffering the full payload.
+
+### Detail Page Double Fetch
+Public post detail pages currently perform two sequential requests: `GET /posts?slug=X` returns a `PostListItem[]` (no content), then `GET /posts/{id}` returns the full `PostRead`. This is the only way to resolve a slug to a full post with the current API shape.
+
+**Current mitigation:** Both requests are fast (indexed slug lookup + PK lookup). At current scale (~100 concurrent users, SSR) the round-trip cost is negligible.
+**Trigger to revisit:** If detail page TTFB becomes a concern under load, or if a CDN/caching layer is introduced.
+**Migration path:** Add `GET /posts/slug/{slug}` endpoint returning full `PostRead`. This endpoint replaces the two-step lookup with a single query: `SELECT * FROM post WHERE slug = :slug`. Update `API_CONTRACT.md` and the frontend `getPostBySlug()` client function accordingly.
+
+### Inline Media Reference Tracking
+Gallery images attached to a post are tracked via a database FK (`Media.post_id`). However, images inserted inline into TipTap rich text are stored as bare URLs inside the JSON blob — no FK, no DB reference. If an admin deletes a `Media` record that is still referenced by URL inside a post's `content` JSON, the image silently breaks with no error or warning.
+
+**Current mitigation:** Admins are responsible for not deleting media that is in use. The MVP has a single admin, making cross-reference awareness feasible.
+**Trigger to revisit:** When a second admin is added, or when media management becomes a regular workflow.
+**Migration path:** Implement a reference-tracking system: on every `DELETE /media/{id}` request, scan `post.content` JSON blobs for `src` URLs matching the media path before allowing deletion. If references exist, return a 409 with the list of affected post IDs. Alternatively, add a `media_references` join table populated by a background scan. Either approach requires a full-text or JSON-path query on the `post.content` column — add a GIN index on `post.content` before implementing at scale.

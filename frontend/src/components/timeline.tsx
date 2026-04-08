@@ -32,11 +32,9 @@ interface TimelineProps {
 
 function buildDayWindow(todayStr: string): Date[] {
   const [y, m, d] = todayStr.split("-").map(Number);
-  const base = new Date(y, m - 1, d); // local midnight, used only for date arithmetic
+  const baseMs = Date.UTC(y, m - 1, d);
   return Array.from({ length: TOTAL_COLS }, (_, i) => {
-    const dt = new Date(base);
-    dt.setDate(base.getDate() + (i - TODAY_IDX));
-    return dt;
+    return new Date(baseMs + (i - TODAY_IDX) * 86_400_000);
   });
 }
 
@@ -49,10 +47,10 @@ function getEventColumns(event: PostListItem, days: Date[]): { startIdx: number;
   if (event.start_date) {
     const [sy, sm, sd] = event.start_date.split("T")[0].split("-").map(Number);
     const idx = days.findIndex(
-      col => col.getFullYear() === sy && col.getMonth() + 1 === sm && col.getDate() === sd
+      col => col.getUTCFullYear() === sy && col.getUTCMonth() + 1 === sm && col.getUTCDate() === sd
     );
     if (idx === -1) {
-      const startMs = new Date(sy, sm - 1, sd).getTime();
+      const startMs = Date.UTC(sy, sm - 1, sd);
       startIdx = startMs > days[TOTAL_COLS - 1].getTime() ? TOTAL_COLS - 1 : 0;
     } else {
       startIdx = idx;
@@ -62,10 +60,10 @@ function getEventColumns(event: PostListItem, days: Date[]): { startIdx: number;
   if (event.end_date) {
     const [ey, em, ed] = event.end_date.split("T")[0].split("-").map(Number);
     const idx = days.findIndex(
-      col => col.getFullYear() === ey && col.getMonth() + 1 === em && col.getDate() === ed
+      col => col.getUTCFullYear() === ey && col.getUTCMonth() + 1 === em && col.getUTCDate() === ed
     );
     if (idx === -1) {
-      const endMs = new Date(ey, em - 1, ed).getTime();
+      const endMs = Date.UTC(ey, em - 1, ed);
       endIdx = endMs < days[0].getTime() ? 0 : TOTAL_COLS - 1;
     } else {
       endIdx = idx;
@@ -112,8 +110,8 @@ export function Timeline({ events, today }: TimelineProps) {
         <div className="flex">
           {days.map((day, i) => {
             const isToday = i === TODAY_IDX;
-            const isFirst = day.getDate() === 1;
-            const topLabel = isFirst ? MONTH_ABBRS[day.getMonth()] : DOW_ABBRS[day.getDay()];
+            const isFirst = day.getUTCDate() === 1;
+            const topLabel = isFirst ? MONTH_ABBRS[day.getUTCMonth()] : DOW_ABBRS[day.getUTCDay()];
             return (
               <div
                 key={i}
@@ -125,7 +123,7 @@ export function Timeline({ events, today }: TimelineProps) {
                   {topLabel}
                 </span>
                 <span className={isToday ? "font-bold text-primary" : "text-muted-foreground"}>
-                  {day.getDate()}
+                  {day.getUTCDate()}
                 </span>
               </div>
             );

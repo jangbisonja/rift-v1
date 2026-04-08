@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   // Login page must be reachable without auth (no redirect loop)
   if (request.nextUrl.pathname === "/mod/login") {
     return NextResponse.next();

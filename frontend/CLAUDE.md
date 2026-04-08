@@ -65,7 +65,7 @@ frontend/
 │   │   ├── schemas/index.ts            # Zod schemas — PostListItem, Post, Tag, Media, etc.
 │   │   ├── media.ts                    # mediaUrl(path) — prepends NEXT_PUBLIC_API_URL
 │   │   └── post-href.ts               # postHref(type, slug) — maps PostType → URL path
-│   └── proxy.ts                        # protects /mod/* — redirects to /mod/login if no cookie
+│   └── middleware.ts                    # protects /mod/* — redirects to /mod/login if no cookie
 ```
 
 ## Component Boundary Rules
@@ -91,7 +91,7 @@ Flow:
 1. User submits login form → POST `/api/auth/login` (Route Handler)
 2. Route Handler calls `POST /auth/login` on backend
 3. On success, sets `token` as HTTP-only cookie
-4. `proxy.ts` checks for the cookie on every `/mod/*` request — redirects to `/mod/login` if missing
+4. `middleware.ts` checks for the cookie on every `/mod/*` request — redirects to `/mod/login` if missing
 5. Server Components: use `getServerToken()` from `lib/api/server.ts`, pass as `token` option to client
 6. Client Components: `fetch` sends cookie automatically (same origin)
 7. Logout: POST `/api/auth/logout` → clears cookie
@@ -229,9 +229,11 @@ directly. If you need to add a third call site, use `getMoscowTodayStr()` — do
 **Next.js 16: all request-time APIs are async**
 `cookies()`, `headers()`, `params`, `searchParams` — always `await` them.
 
-**Next.js 16: `middleware.ts` → `proxy.ts`**
-File is `src/proxy.ts`, export named `proxy` function (or default). Same `NextRequest`/
-`NextResponse` API. Same `matcher` config export.
+**Next.js 16: middleware file must be named `middleware.ts`**
+File is `src/middleware.ts`, export named `middleware`. Next.js loads middleware exclusively
+by filename — any other name (e.g. `proxy.ts`) is silently ignored, leaving route protection
+inactive. The matcher config export and `NextRequest`/`NextResponse` API are unchanged from
+earlier versions.
 
 **Next.js 16: `experimental.turbopack` → top-level `turbopack`**
 Turbopack is default for `next dev` and `next build`. Config moves out of `experimental`.
@@ -390,6 +392,14 @@ boundary — extracted into `PromoCopyButton` (accepts `promoCode: string`). Thi
 TODAY_IDX must satisfy TODAY_IDX < TOTAL_COLS). Grouping them in `TIMELINE_CONFIG as const` makes
 the dependency explicit and prevents silent drift. Destructured at usage so the rest of the file
 reads unchanged.
+
+**Timeline day window uses UTC Date arithmetic**
+`buildDayWindow()` constructs dates via `Date.UTC(y, m, d) + i * 86_400_000` and reads them
+back with `getUTCDate()`, `getUTCMonth()`, `getUTCDay()`. This makes column placement
+completely timezone-independent: a visitor in UTC-8 and a visitor in UTC+9 see identical
+column indices for any given event. The `today` string (Moscow time, `YYYY-MM-DD`) is
+provided by the parent via `getMoscowTodayStr()` — the Timeline component itself never
+calls `new Date()`.
 
 ## Module Addition & UI Extension Protocol
 
