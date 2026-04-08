@@ -100,3 +100,27 @@ Two `BaseSettings` classes, one `.env` file, both use `extra="ignore"`:
 - File naming: `YYYY-MM-DD_description.py`
 - Always implement `downgrade()` — migrations must be reversible
 - Never edit a migration after it has been applied to any environment
+
+## Future Scaling & Technical Debt
+
+Decisions made to keep the MVP simple. Revisit when the noted trigger condition is met.
+
+### Excerpt Generation
+Excerpts (`PostListItem.excerpt`) are computed on-the-fly during Pydantic serialization by walking the TipTap JSON tree for every post returned in a list response. This is correct and fast at current scale (~100 concurrent users, shallow content).
+
+**Trigger to revisit:** If `GET /posts` list latency degrades under profiling.
+**Migration path:** Add a `excerpt TEXT` column to the `post` table. Populate it in `service.create()` and `service.update()` alongside `slug`. Remove `inject_excerpt` from `schemas.py`.
+
+### Media Orphan Accumulation
+When a Post is deleted, its associated `Media` rows have `post_id` set to `NULL` (via `ondelete="SET NULL"`). The `.webp` files on disk are not deleted. Orphaned files accumulate silently.
+
+**Current mitigation:** The `/mod/media` admin page lists all media, allowing manual deletion.
+**Trigger to revisit:** When disk usage becomes a concern or a second admin is added.
+**Migration path:** Add a bulk-delete action to the media admin UI, or implement a `purge_unreferenced_media` management script that deletes `Media` rows where `post_id IS NULL AND created_at < now() - interval '30 days'` and calls `storage.delete()` for each.
+
+### Upload Memory Safety
+The current upload flow reads the entire file into memory (`await file.read()`) before checking the size limit. The application-level check (`len(content) > MAX_FILE_SIZE_MB * 1024 * 1024`) fires after the allocation.
+
+**Current mitigation:** The Nginx reverse proxy enforces `client_max_body_size 10m` at the transport layer, rejecting oversized requests before they reach FastAPI.
+**Trigger to revisit:** If the system moves to a multi-admin model, direct S3/object-storage uploads, or accepts uploads from untrusted sources.
+**Migration path:** Replace `await file.read()` with a streaming approach using `file.chunks()` and a running byte counter; raise `FileTooLarge` as soon as the counter exceeds the limit without buffering the full payload.

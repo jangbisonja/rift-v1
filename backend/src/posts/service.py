@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from slugify import slugify
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -93,7 +94,11 @@ async def create(data: PostCreate, session: AsyncSession) -> Post:
         redirect_to_external=data.redirect_to_external,
     )
     session.add(post)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise SlugAlreadyExists()
     await session.refresh(post)
     return post
 
@@ -118,11 +123,21 @@ async def update(post_id: uuid.UUID, data: PostUpdate, session: AsyncSession) ->
     if "promo_code" in changes and changes["promo_code"] is not None:
         changes["promo_code"] = changes["promo_code"].upper()
 
+    # Promo code slug sync: regenerate slug when promo_code changes and post has no title
+    if "promo_code" in changes and changes["promo_code"] and not post.title:
+        changes["slug"] = await _unique_slug(
+            changes["promo_code"], session, exclude_id=post_id
+        )
+
     # --- Generic field application ---
     for field, value in changes.items():
         setattr(post, field, value)
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise SlugAlreadyExists()
     await session.refresh(post)
     return post
 
