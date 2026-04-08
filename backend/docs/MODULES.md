@@ -92,6 +92,27 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 ---
 
+## `timers`
+
+**Purpose**: Store and serve the 14-toggle activity schedule (2 event types × 7 days) for World Boss and Rift world events. Admin writes; public reads.
+
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
+
+**Key files**:
+- `constants.py` — `TimerType` enum: `WORLD_BOSS`, `RIFT`
+- `models.py` — `TimerSchedule` (UUID PK, `timer_type` enum NOT NULL, `day_of_week` SMALLINT NOT NULL 0–6, `is_active` BOOLEAN NOT NULL default false); unique constraint on `(timer_type, day_of_week)`
+- `schemas.py` — `TimerScheduleResponse` and `TimerScheduleUpdate`: both carry `world_boss: list[bool]` (7 elements) and `rift: list[bool]` (7 elements); index 0 = Monday, index 6 = Sunday (ISO 8601)
+- `service.py` — `get_schedule()`: queries all 14 rows, assembles two 7-element arrays; `update_schedule()`: atomically UPDATEs all 14 `is_active` values from input arrays (no DELETE+INSERT)
+- `seeder.py` — `seed_timer_schedule()`: idempotent; inserts all 14 rows (existence check per row) if absent, all defaulting to `is_active=False`; called from `main.py` lifespan startup
+
+**Design decisions**:
+- **14 rows always present (seeder guarantee)**: eliminates NULL-handling in service — `get_schedule()` never needs to handle missing rows; gaps in the schedule are impossible at runtime
+- **UPDATE per row, not DELETE+INSERT**: preserves row UUIDs and avoids FK/constraint churn; atomicity is application-level (all updates in one session before `commit()`)
+- **No timezone logic in backend**: the backend stores a static boolean grid only. All MSK conversion, in-game day calculation, and countdown logic live entirely on the frontend (RULES.md #W1, #W3; TIMERS.md algorithm)
+- **`GET /timers/schedule` is public**: countdown bar is visible to all users without login (RULES.md #W4); only the PUT write endpoint requires superuser auth
+
+---
+
 ## Global Files
 
 ### `src/main.py`

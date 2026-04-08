@@ -225,3 +225,24 @@ export async function attachMedia(mediaId: string, postId: string, token: string
 export async function deleteMedia(id: string, token: string): Promise<void> {
   return request<void>(`/media/${id}`, { method: "DELETE" }, { token });
 }
+
+// ─── Timers ───────────────────────────────────────────────────────────────────
+
+export interface TimerSchedule {
+  /** 7-element boolean array. Index 0 = Monday, index 6 = Sunday (ISO 8601). */
+  world_boss: boolean[];
+  /** 7-element boolean array. Index 0 = Monday, index 6 = Sunday (ISO 8601). */
+  rift: boolean[];
+}
+
+export async function getTimerSchedule(options: RequestOptions = {}): Promise<TimerSchedule> {
+  return request<TimerSchedule>("/timers/schedule", {}, options);
+}
+
+export async function updateTimerSchedule(data: TimerSchedule, token: string): Promise<TimerSchedule> {
+  return request<TimerSchedule>(
+    "/timers/schedule",
+    { method: "PUT", body: JSON.stringify(data) },
+    { token },
+  );
+}

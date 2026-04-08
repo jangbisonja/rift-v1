@@ -1,46 +1,137 @@
-# Module Spec: Activity Timers
+# Module Spec — Activity Timers
 
 ## Purpose
 
-Display countdown timers for recurring "World Boss" and "Rift" events on the
-Homepage. Timers follow a strict 7-day schedule controlled by admin toggles.
+Display real-time countdowns for two recurring world events (World Boss and Rift/Chaos) in a 30 px header bar on the Homepage. An admin panel page allows independent per-day activation for each event type across a 7-day cycle.
+
+---
 
 ## Inputs
 
-- **Schedule config** (admin-managed): 7-day array of booleans — one per weekday,
-  indicating whether events fire that day. Stored server-side, exposed via API.
-- **Current time**: Server UTC clock, converted to Moscow Time for day-boundary logic.
+- **Admin**: 14 boolean toggles (2 event types × 7 days) written via `PUT /timers/schedule`.
+- **Client clock**: Current wall-clock time, converted to MSK (UTC+3, fixed offset, no DST).
+
+---
 
 ## Outputs
 
-- **Timer state** (API → frontend): For each event type, the time remaining until
-  the next occurrence, or a "no events today" indicator.
-- **UI**: A 30 px-tall header bar rendered strictly on the Homepage, horizontally
-  aligned with the Theme Toggle. Not visible on any other page.
+- **`GET /timers/schedule`** (public): the 14-toggle grid as two 7-element boolean arrays (see `API_CONTRACT.md`).
+- **Timer bar** (frontend, homepage only): two side-by-side countdowns, each showing either `HH:MM:SS` or "Сегодня нет".
+
+---
 
 ## Algorithm
 
-| Step | Logic |
-|---|---|
-| 1. Determine current "in-game day" | Current Moscow Time. Day boundary is **06:00 MSK** (03:00 UTC). Before 06:00 = previous calendar day. |
-| 2. Check if day is active | Look up today's boolean in the 7-day schedule array. |
-| 3. If inactive | Return "no events today" state. Timer bar shows inactivity message. |
-| 4. If active | Events fire every hour on the hour (XX:00 MSK). Compute minutes until next XX:00. |
-| 5. Render countdown | Display `MM:SS` until next event. After event fires, reset to next hour. |
+### Key Definitions
+
+- **In-game Day**: defined by the admin schedule. Each in-game day runs from 06:00 MSK to 05:59 MSK the following calendar day. The toggle for a given weekday name (e.g. "Tuesday") controls the window 06:00 MSK Tuesday → 05:59 MSK Wednesday.
+- **Calendar Day**: 00:00 MSK to 23:59 MSK. Used exclusively by the UI scan window.
+
+These two concepts are strictly separated — the admin configures in-game days; the UI serves the user's calendar-day question.
+
+### In-Game Day for a Given Timestamp
+
+```
+if timestamp.hour >= 6:
+    in_game_dow = timestamp.weekday()           # ISO: Mon=0, Sun=6
+else:
+    in_game_dow = (timestamp.date - 1).weekday()
+```
+
+### UI Countdown Logic (per timer type, runs client-side)
+
+```
+msk_now   = utc_now + 3h   # fixed UTC+3, no DST
+next_slot = ceiling(msk_now → next XX:00 MSK)
+
+while next_slot is within calendar day (≤ 23:59 MSK):
+
+    in_game_dow = in_game day of next_slot (see above)
+
+    if schedule[timer_type][in_game_dow] is active:
+        display = HH:MM:SS countdown to next_slot
+        break
+
+    else:   # whole in-game window is off — skip to next window
+        if next_slot.hour < 6:
+            next_slot = today at 06:00 MSK   # jump to next in-game window
+        else:
+            break   # no further in-game windows this calendar day
+
+else:
+    display = "Сегодня нет"
+```
+
+At most two in-game day checks per evaluation. Maximum countdown value: `00:59:59`.
+
+### Example: 05:15 MSK Tuesday, Tuesday in-game day active
+
+- `next_slot` = 06:00 MSK Tuesday
+- `in_game_dow` = Tuesday (hour ≥ 6)
+- Tuesday active → countdown to 06:00 ✓
+
+### Example: 01:15 MSK Tuesday, Monday inactive, Tuesday active
+
+- `next_slot` = 02:00 MSK Tuesday → `in_game_dow` = Monday → inactive → jump to 06:00
+- `next_slot` = 06:00 MSK Tuesday → `in_game_dow` = Tuesday → active → countdown to 06:00 ✓
+
+---
+
+## Data Model
+
+Table: `timer_schedule`
+
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | UUID | PK (RULES.md #G1) |
+| `timer_type` | `TimerType` enum | NOT NULL |
+| `day_of_week` | SMALLINT | NOT NULL, 0–6, ISO 8601: Mon=0, Sun=6 |
+| `is_active` | BOOLEAN | NOT NULL, default `false` |
+
+Unique constraint: `(timer_type, day_of_week)`.
+
+Seeded on startup via lifespan (idempotent): 14 rows inserted if absent. All default to `false`.
+
+---
 
 ## Boundaries
 
-- **MUST use:** `Europe/Moscow` timezone for all day-boundary and display logic (see RULES.md #T2, #W1).
-- **MUST use:** Server-side schedule storage. Frontend receives computed timer state, does NOT store schedule locally.
-- **MUST NOT use:** Client-side date logic for determining the active day. The server is authoritative.
-- **MUST NOT invent:** Custom cron or scheduler libraries. The 7-day toggle + hourly cadence is a simple modulo calculation, not a scheduling problem.
+**MUST:**
+- Use fixed UTC+3 offset for MSK — never rely on `Intl` timezone database or system timezone for MSK conversion (RULES.md #T2)
+- Seed all 14 rows on startup; never leave gaps in the schedule
+- Return arrays in ISO weekday order: index 0 = Monday, index 6 = Sunday
+- `PUT /timers/schedule` always replaces the full 14-toggle grid atomically — no partial updates
+- Timer bar renders on the Homepage only (RULES.md #W4)
+- All UI text in Russian (RULES.md #T3): "Сегодня нет"
+
+**MUST NOT:**
+- Store or return a "current time" from the backend — the backend only stores the static schedule
+- Add DST handling (MSK has no DST — UTC+3 is permanent)
+- Render the bar on any page other than the homepage
+- Accept partial schedule updates (e.g., individual toggle PATCH endpoints)
+
+---
 
 ## Integration Points
 
-- `backend/src/timers/` (new module) — schedule CRUD + timer state endpoint.
-- `frontend/src/components/timer-bar.tsx` (new) — 30 px header bar, Homepage only.
-- `frontend/src/app/(public)/page.tsx` — Homepage layout, timer bar insertion point.
+| Layer | Path |
+|---|---|
+| Backend model | `backend/src/timers/models.py` |
+| Backend schema | `backend/src/timers/schemas.py` |
+| Backend service | `backend/src/timers/service.py` |
+| Backend router | `backend/src/timers/router.py` |
+| Backend constants | `backend/src/timers/constants.py` |
+| Backend seeder | `backend/src/timers/seeder.py` (called from `main.py` lifespan) |
+| Backend migration | `backend/alembic/versions/YYYY-MM-DD_timer-schedule.py` |
+| Frontend schedule fetch | `frontend/src/lib/timers.ts` |
+| Frontend countdown logic | `frontend/src/components/timer-bar.tsx` (client component) |
+| Frontend homepage | `frontend/src/app/page.tsx` |
+| Admin schedule page | `frontend/src/app/mod/timers/page.tsx` |
+| Timer icons | `frontend/public/assets/timers/world_boss.webp`, `rift.webp` |
+| API contract | `API_CONTRACT.md` |
 
-## Applicable Rules
+---
 
-RULES.md: #T1, #T2, #T3, #W1, #W2, #W3, #W4
+## Applicable RULES.md Rules
+
+W1, W2, W3, W4, T2, T3, G1, G4, A1, A2

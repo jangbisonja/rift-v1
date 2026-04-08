@@ -19,6 +19,19 @@ Before writing code that touches business logic, read `RULES.md` at the project 
 If your implementation would violate any numbered rule, stop and raise the conflict
 with the user. Do not silently work around a rule.
 
+## Phase 3–5 Module Spec Gate
+
+**No code may be written for any Phase 3, 4, or 5 module until:**
+1. A full Module Specification exists in `docs/` following the Module Spec Format below.
+2. The spec has been manually reviewed and approved by the user.
+
+This is a hard gate — not a suggestion. If a user ask implies Phase 3–5 implementation without a pre-existing approved spec, stop and raise it explicitly before doing anything else.
+
+Approved specs:
+- `docs/TIMERS.md` — Activity Timers (Phase 2) ✓
+- `docs/AUTH.md` — Discord Auth (Phase 2) — in progress, not yet approved
+- `docs/CHARACTERS.md` — Character Engine & Ownership (Phase 3) — draft, not yet approved
+
 ## Module Spec Format
 
 When documenting a new complex module in `*/docs/`, use this structure:

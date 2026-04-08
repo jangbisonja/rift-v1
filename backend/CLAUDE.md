@@ -28,6 +28,7 @@ backend/
 │   ├── posts/        # Post CRUD + M2M tags
 │   ├── media/        # File upload, WebP conversion
 │   ├── tags/         # Tag management
+│   ├── timers/       # Activity timer schedule (14-toggle grid)
 │   ├── config.py     # Global BaseSettings
 │   ├── models.py     # DeclarativeBase + naming convention
 │   ├── database.py   # Async engine + session

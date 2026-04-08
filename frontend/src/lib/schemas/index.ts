@@ -93,7 +93,9 @@ export type Post = z.infer<typeof PostSchema>;
 
 // ─── Post write ───────────────────────────────────────────────────────────────
 
-export const PostCreateSchema = z.object({
+// Base object — no refinements. Used for .omit() (Zod v4: .omit() cannot be
+// called on a schema that has .superRefine()/.refine() applied).
+const PostCreateBaseSchema = z.object({
   type: PostType,
   // PROMO posts have no title — allow empty; non-PROMO validated below
   title: z.string().max(256).default(""),
@@ -106,7 +108,9 @@ export const PostCreateSchema = z.object({
   promo_code: z.string().nullable().default(null),
   external_link: z.string().nullable().default(null),
   redirect_to_external: z.boolean().default(false),
-}).superRefine((data, ctx) => {
+});
+
+export const PostCreateSchema = PostCreateBaseSchema.superRefine((data, ctx) => {
   // Title required for all types except PROMO
   if (data.type !== "PROMO" && !data.title) {
     ctx.addIssue({
@@ -135,7 +139,9 @@ export const PostCreateSchema = z.object({
 });
 export type PostCreate = z.infer<typeof PostCreateSchema>;
 
-export const PostUpdateSchema = PostCreateSchema.omit({ type: true });
+// .omit() called on the base schema (before refinements) — required by Zod v4.
+// PostUpdateSchema is the API payload type only; form validation still uses PostCreateSchema.
+export const PostUpdateSchema = PostCreateBaseSchema.omit({ type: true });
 export type PostUpdate = z.infer<typeof PostUpdateSchema>;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

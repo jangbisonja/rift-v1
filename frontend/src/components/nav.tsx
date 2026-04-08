@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NavTimerBar } from "@/components/nav-timer-bar";
 
 const LINKS = [
   { href: "/news", label: "Новости" },
@@ -28,7 +29,10 @@ export function Nav() {
             ))}
           </nav>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-4">
+          <NavTimerBar />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

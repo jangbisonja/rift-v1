@@ -78,18 +78,17 @@ function getEventColumns(event: PostListItem, days: Date[]): { startIdx: number;
 
 export function Timeline({ events, today }: TimelineProps) {
   const days = buildDayWindow(today);
-  const todayRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    todayRef.current?.scrollIntoView({
-      inline: "center",
-      block: "nearest",
-      behavior: "instant",
-    });
+    const container = scrollRef.current;
+    if (!container) return;
+    const todayCenter = TODAY_IDX * COL_WIDTH + COL_WIDTH / 2;
+    container.scrollLeft = todayCenter - container.clientWidth / 2;
   }, []);
 
   return (
-    <div className="overflow-x-auto scrollbar-thin">
+    <div ref={scrollRef} className="overflow-x-auto scrollbar-thin">
       {/* Outer wrapper — establishes containing block for the indicator */}
       <div className="relative pt-[5px]" style={{ width: STRIP_WIDTH }}>
 
@@ -115,7 +114,6 @@ export function Timeline({ events, today }: TimelineProps) {
             return (
               <div
                 key={i}
-                ref={isToday ? todayRef : undefined}
                 className={`flex flex-col items-center shrink-0 text-xs leading-tight py-0.5 ${isToday ? "bg-primary/10 ring-1 ring-primary" : ""}`}
                 style={{ width: COL_WIDTH }}
               >

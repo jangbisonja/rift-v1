@@ -27,6 +27,16 @@ Send as: `Authorization: Bearer <access_token>`
 **Enums**
 - `PostType`: `NEWS` | `ARTICLE` | `PROMO` | `EVENT`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
+- `TimerType`: `WORLD_BOSS` | `RIFT`
+
+**Timer schedule shape (`TimerSchedule`):**
+```json
+{
+  "world_boss": [false, false, false, false, false, false, false],
+  "rift":       [false, false, false, false, false, false, false]
+}
+```
+Array index 0 = Monday, index 6 = Sunday (ISO 8601). Both arrays always contain exactly 7 elements.
 
 **Two post response shapes:**
 - `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media, start_date, end_date, promo_code, external_link, redirect_to_external`. No `content`, no `post_metadata`.
@@ -85,3 +95,5 @@ The standalone `GET /media` endpoint returns a fuller shape that also includes `
 | POST | `/media/upload` | superuser | Upload image (→ WebP) |
 | POST | `/media/{id}/attach/{post_id}` | superuser | Link media to post |
 | DELETE | `/media/{id}` | superuser | Delete media |
+| GET | `/timers/schedule` | public | Current 14-toggle schedule → `TimerSchedule` |
+| PUT | `/timers/schedule` | superuser | Bulk-replace all 14 toggles → `TimerSchedule` |

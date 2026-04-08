@@ -440,6 +440,24 @@ names. It is generated from the file system during `next dev` or `next build`. S
 resolve `params` to `{}`. Either style is correct — use `PageProps` when the stricter typing
 is valuable.
 
+**Zod v4: `.omit()` cannot be called on a schema with `.superRefine()` / `.refine()` applied**
+In Zod v4, calling `.omit()` or `.pick()` on a schema that has had `.superRefine()` or `.refine()` applied throws at module-load time: `".omit() cannot be used on object schemas containing refinements"`. This crashes any page that imports the schema module.
+Fix: extract the base `z.object({...})` into a separate unexported const, apply `.superRefine()` to it to create the validated schema, and call `.omit()` on the base const directly.
+Example: `PostCreateBaseSchema` (base, unexported) → `PostCreateSchema = PostCreateBaseSchema.superRefine(...)` → `PostUpdateSchema = PostCreateBaseSchema.omit({ type: true })`.
+Applied in `src/lib/schemas/index.ts`. Any new schema with cross-field refinements must follow this pattern.
+
+**Homepage-only client content inside a global Server Component layout — `NavTimerBar` pattern**
+The nav (`src/components/nav.tsx`) is a Server Component rendered from the root layout. It cannot receive props from a specific page. To inject homepage-only interactive content (the timer bar) into the nav's right side without modifying the global layout, we use a Client Component island (`src/components/nav-timer-bar.tsx`) that:
+1. Calls `usePathname()` — returns `null` immediately if not on `"/"`.
+2. Self-fetches its data on mount via `useEffect` + the API client.
+3. Runs its own `setInterval` countdown.
+The parent (`nav.tsx`) remains a Server Component. This is the correct pattern for any future case where a page-scoped feature needs to appear inside the global nav without coupling the layout to page data.
+
+**Shared pure logic between a prop-fed component and a self-fetching component — extract to `lib/`**
+When two components need the same computation (e.g., MSK time arithmetic, countdown formatting) but one receives data as props (server-fed) and the other self-fetches (client nav island), do NOT duplicate the logic or import from a UI component.
+Extract pure TypeScript functions to `src/lib/<domain>-logic.ts` with no React imports. Both components import from there.
+Applied: `src/lib/timer-logic.ts` is imported by both `src/components/timer-bar.tsx` and `src/components/nav-timer-bar.tsx`. If adding future timer-adjacent logic, add it to `timer-logic.ts` — not inline in a component.
+
 ## Module Addition & UI Extension Protocol
 
 Mandatory checklist. Every step must be completed in order. No skipping.
