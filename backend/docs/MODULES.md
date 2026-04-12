@@ -141,6 +141,29 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 
 ---
 
+## `raids`
+
+**Purpose**: Raid and raid boss catalog — create, read, update, and delete raid definitions and their associated boss entries. Admin writes only; no public endpoints.
+
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
+
+**Key files**:
+- `constants.py` — `RaidDifficulty` enum: `NORMAL`, `HARD`, `TFM`, `NIGHTMARE`
+- `models.py` — `Raid` (UUID PK, `name` VARCHAR(100), `min_gear_score` INTEGER, `difficulty` enum, `groups_count` SMALLINT 1–4, `phases_count` INTEGER ≥1, `cover_media_id` FK nullable `SET NULL`); `RaidBoss` (UUID PK, `raid_id` FK `CASCADE`, `name` VARCHAR(100), `phase_number` INTEGER ≥1, `icon_media_id` FK nullable `SET NULL`)
+- `schemas.py` — `RaidCreate`, `RaidUpdate`, `RaidBossCreate`, `RaidBossUpdate` (input); `RaidRead`, `RaidBossRead`, `PaginatedRaids`, `PaginatedRaidBosses` (output); imports `MediaRead` from `src.media.schemas`
+- `service.py` — CRUD for raids and bosses; `get_all_raids()` and `get_all_bosses()` return `(items, total)` tuples; bosses ordered by `phase_number ASC`; media existence validated on create/update via `db.get()`
+- `dependencies.py` — `valid_raid_id`: resolves `Raid` by UUID; `valid_boss_in_raid`: resolves `RaidBoss` asserting correct `raid_id`
+
+**Design decisions**:
+- **No public endpoints**: all 10 endpoints require `current_superuser` — raid catalog is admin-managed content
+- **`phase_number` not unique per raid**: multiple bosses may share the same phase (e.g. two simultaneous bosses in phase 3); no unique constraint
+- **`groups_count` 1–4 constraint**: enforced in Pydantic (`ge=1, le=4`) — matches in-game raid group limits
+- **Media validated via `db.get()` before FK insert**: raises typed `RaidCoverNotFound` / `RaidBossIconNotFound` rather than letting the DB throw a generic FK violation
+- **`cover_media_id` and `icon_media_id` use `model_fields_set` semantics on update**: distinguishes "field omitted" (no-op) from "field explicitly set to null" (clears media)
+- **No `use_alter=True` on media FKs**: `media` does not FK back to `raid` or `raid_boss` — no circular dependency, so deferred ALTER TABLE is unnecessary
+
+---
+
 ## Global Files
 
 ### `src/main.py`

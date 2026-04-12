@@ -12,7 +12,7 @@
  * Pagination is limit/offset, not page/size.
  */
 
-import type { Post, PostListItem, PostCreate, PostUpdate, Tag, TagCreate, Media, PublicUser } from "@/lib/schemas";
+import type { Post, PostListItem, PostCreate, PostUpdate, Tag, TagCreate, Media, PublicUser, Raid, RaidCreate, PaginatedRaids, RaidBoss, RaidBossCreate, PaginatedRaidBosses } from "@/lib/schemas";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -245,6 +245,63 @@ export async function updateTimerSchedule(data: TimerSchedule, token: string): P
     { method: "PUT", body: JSON.stringify(data) },
     { token },
   );
+}
+
+// ─── Raids ────────────────────────────────────────────────────────────────────
+
+export async function listRaids(
+  params: { limit?: number; offset?: number } = {},
+  token?: string,
+): Promise<PaginatedRaids> {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  const query = qs.toString() ? `?${qs}` : "";
+  return request<PaginatedRaids>(`/raids${query}`, {}, { token });
+}
+
+export async function createRaid(data: RaidCreate, token?: string): Promise<Raid> {
+  return request<Raid>("/raids", { method: "POST", body: JSON.stringify(data) }, { token });
+}
+
+export async function getRaid(id: string, token?: string): Promise<Raid> {
+  return request<Raid>(`/raids/${id}`, {}, { token });
+}
+
+export async function updateRaid(id: string, data: Partial<RaidCreate>, token?: string): Promise<Raid> {
+  return request<Raid>(`/raids/${id}`, { method: "PUT", body: JSON.stringify(data) }, { token });
+}
+
+export async function deleteRaid(id: string, token?: string): Promise<void> {
+  return request<void>(`/raids/${id}`, { method: "DELETE" }, { token });
+}
+
+export async function listRaidBosses(
+  raidId: string,
+  params: { limit?: number; offset?: number } = {},
+  token?: string,
+): Promise<PaginatedRaidBosses> {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  const query = qs.toString() ? `?${qs}` : "";
+  return request<PaginatedRaidBosses>(`/raids/${raidId}/bosses${query}`, {}, { token });
+}
+
+export async function createRaidBoss(raidId: string, data: RaidBossCreate, token?: string): Promise<RaidBoss> {
+  return request<RaidBoss>(`/raids/${raidId}/bosses`, { method: "POST", body: JSON.stringify(data) }, { token });
+}
+
+export async function getRaidBoss(raidId: string, bossId: string, token?: string): Promise<RaidBoss> {
+  return request<RaidBoss>(`/raids/${raidId}/bosses/${bossId}`, {}, { token });
+}
+
+export async function updateRaidBoss(raidId: string, bossId: string, data: Partial<RaidBossCreate>, token?: string): Promise<RaidBoss> {
+  return request<RaidBoss>(`/raids/${raidId}/bosses/${bossId}`, { method: "PUT", body: JSON.stringify(data) }, { token });
+}
+
+export async function deleteRaidBoss(raidId: string, bossId: string, token?: string): Promise<void> {
+  return request<void>(`/raids/${raidId}/bosses/${bossId}`, { method: "DELETE" }, { token });
 }
 
 // ─── Public User ──────────────────────────────────────────────────────────────

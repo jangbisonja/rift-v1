@@ -174,6 +174,66 @@ export const PublicUserSchema = z.object({
 });
 export type PublicUser = z.infer<typeof PublicUserSchema>;
 
+// ─── Raids ────────────────────────────────────────────────────────────────────
+
+export const RaidDifficultyEnum = z.enum(["NORMAL", "HARD", "TFM", "NIGHTMARE"]);
+export type RaidDifficulty = z.infer<typeof RaidDifficultyEnum>;
+
+export const RaidSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  min_gear_score: z.number().int(),
+  difficulty: RaidDifficultyEnum,
+  groups_count: z.number().int(),
+  phases_count: z.number().int(),
+  cover_media: MediaReadSchema.nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type Raid = z.infer<typeof RaidSchema>;
+
+export const RaidBossSchema = z.object({
+  id: z.string().uuid(),
+  raid_id: z.string().uuid(),
+  name: z.string(),
+  phase_number: z.number().int(),
+  icon_media: MediaReadSchema.nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type RaidBoss = z.infer<typeof RaidBossSchema>;
+
+export const PaginatedRaidsSchema = z.object({
+  items: z.array(RaidSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+export type PaginatedRaids = z.infer<typeof PaginatedRaidsSchema>;
+
+export const PaginatedRaidBossesSchema = z.object({
+  items: z.array(RaidBossSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+export type PaginatedRaidBosses = z.infer<typeof PaginatedRaidBossesSchema>;
+
+export type RaidCreate = {
+  name: string;
+  min_gear_score: number;
+  difficulty: "NORMAL" | "HARD" | "TFM" | "NIGHTMARE";
+  groups_count: number;
+  phases_count: number;
+  cover_media_id?: string | null;
+};
+
+export type RaidBossCreate = {
+  name: string;
+  phase_number: number;
+  icon_media_id?: string | null;
+};
+
 // ─── Nickname form ─────────────────────────────────────────────────────────────
 
 export const NicknameSchema = z.object({

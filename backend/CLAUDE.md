@@ -24,6 +24,7 @@ backend/
 │   ├── media/        # File upload, WebP conversion
 │   ├── tags/         # Tag management
 │   ├── timers/       # Activity timer schedule (14-toggle grid)
+│   ├── raids/        # Raid catalog + boss entries (admin-only)
 │   ├── users/        # Public user profiles, nicknames, cosmetics, prohibited words
 │   ├── config.py     # Global BaseSettings
 │   ├── models.py     # DeclarativeBase + naming convention

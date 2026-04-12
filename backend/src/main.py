@@ -17,6 +17,7 @@ from src.config import settings
 from src.database import async_session_maker, engine
 from src.media.router import router as media_router
 from src.posts.router import router as posts_router
+from src.raids.router import router as raids_router
 from src.tags.router import router as tags_router
 from src.timers.router import router as timers_router
 from src.timers.seeder import seed_timer_schedule
@@ -81,6 +82,7 @@ app.include_router(tags_router)
 app.include_router(posts_router)
 app.include_router(media_router)
 app.include_router(timers_router)
+app.include_router(raids_router, prefix="/raids", tags=["raids"])
 
 Path("uploads").mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

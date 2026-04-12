@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FileText, Tag, Image, Timer, LogOut } from "lucide-react";
+import { FileText, Tag, Image, Timer, Shield, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { href: "/mod/tags", label: "Tags", icon: Tag },
   { href: "/mod/media", label: "Media", icon: Image },
   { href: "/mod/timers", label: "Таймеры", icon: Timer },
+  { href: "/mod/raids", label: "Рейды", icon: Shield },
 ];
 
 export function ModSidebar() {

@@ -30,6 +30,7 @@ Send as: `Authorization: Bearer <access_token>`
 - `TimerType`: `WORLD_BOSS` | `RIFT`
 - `NicknameScript`: `CYRILLIC` | `LATIN`
 - `UserBadge`: `VERIFIED` | `FOUNDER`
+- `RaidDifficulty`: `NORMAL` | `HARD` | `TFM` | `NIGHTMARE` — stored as PG enum `raid_difficulty`; frontend maps to Russian labels via `RAID_DIFFICULTY_LABELS` in `frontend/src/lib/game.ts`
 
 **Timer schedule shape (`TimerSchedule`):**
 ```json
@@ -96,6 +97,39 @@ Full URL: `{BASE_URL}/{media.path}`
 **Media in posts** — `MediaRead` shape (inside `PostListItem`/`PostRead`): `id, path, original_name` only.
 The standalone `GET /media` endpoint returns a fuller shape that also includes `post_id, created_at`.
 
+**`RaidRead` shape:**
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "min_gear_score": 0,
+  "difficulty": "NORMAL | HARD | TFM | NIGHTMARE",
+  "groups_count": 1,
+  "phases_count": 1,
+  "cover_media": { "id": "uuid", "path": "uploads/YYYY/MM/DD/{uuid}.webp", "original_name": "string" } | null,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z"
+}
+```
+
+**`RaidBossRead` shape:**
+```json
+{
+  "id": "uuid",
+  "raid_id": "uuid",
+  "name": "string",
+  "phase_number": 1,
+  "icon_media": { "id": "uuid", "path": "uploads/YYYY/MM/DD/{uuid}.webp", "original_name": "string" } | null,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z"
+}
+```
+
+**Paginated list shape (raids and bosses):**
+```json
+{ "items": [...], "total": 0, "limit": 20, "offset": 0 }
+```
+
 ## Endpoint Summary
 
 | Method | Path | Auth | Description |
@@ -131,3 +165,13 @@ The standalone `GET /media` endpoint returns a fuller shape that also includes `
 | DELETE | `/media/{id}` | superuser | Delete media |
 | GET | `/timers/schedule` | public | Current 14-toggle schedule → `TimerSchedule` |
 | PUT | `/timers/schedule` | superuser | Bulk-replace all 14 toggles → `TimerSchedule` |
+| GET | `/raids` | superuser | List raids (`?limit=`, `?offset=`) → paginated `RaidRead[]` |
+| POST | `/raids` | superuser | Create raid → `RaidRead` |
+| GET | `/raids/{id}` | superuser | Single raid → `RaidRead` |
+| PUT | `/raids/{id}` | superuser | Full update → `RaidRead` |
+| DELETE | `/raids/{id}` | superuser | Delete raid (cascades bosses) → 204 |
+| GET | `/raids/{id}/bosses` | superuser | List bosses ordered by `phase_number ASC` (`?limit=`, `?offset=`) → paginated `RaidBossRead[]` |
+| POST | `/raids/{id}/bosses` | superuser | Create boss → `RaidBossRead` |
+| GET | `/raids/{id}/bosses/{boss_id}` | superuser | Single boss → `RaidBossRead` |
+| PUT | `/raids/{id}/bosses/{boss_id}` | superuser | Full update → `RaidBossRead` |
+| DELETE | `/raids/{id}/bosses/{boss_id}` | superuser | Delete boss → 204 |
