@@ -7,6 +7,7 @@ import { Timeline } from "@/components/timeline";
 import type { PostListItem } from "@/lib/schemas";
 import { PageContainer } from "@/components/page-container";
 import { getMoscowTodayStr } from "@/lib/date";
+import { WelcomeToast } from "@/components/welcome-toast";
 
 export const revalidate = 60;
 
@@ -18,7 +19,10 @@ async function fetchPosts(type: string, limit = 20, visibility?: "public" | "all
   }
 }
 
-export default async function HomePage() {
+export default async function HomePage(props: { searchParams?: Promise<Record<string, string>> }) {
+  const sp = await props.searchParams;
+  const isWelcome = sp?.welcome === "1";
+
   const [news, articles, events, promos] = await Promise.all([
     fetchPosts("NEWS", 4),
     fetchPosts("ARTICLE", 4),
@@ -40,6 +44,7 @@ export default async function HomePage() {
 
   return (
     <PageContainer className="space-y-14">
+      {isWelcome && <WelcomeToast />}
 
       {/* ── News + Promos ──────────────────────────────────────────────────── */}
       {(news.length > 0 || promos.length > 0) && (

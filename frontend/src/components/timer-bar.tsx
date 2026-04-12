@@ -68,7 +68,7 @@ export function TimerBar({ schedule }: TimerBarProps) {
   }, [schedule]);
 
   return (
-    <div className="h-[30px] flex items-center gap-6 px-4 border-b bg-background/60 backdrop-blur">
+    <div className="flex items-center gap-6">
       <TimerDisplay
         label="Мировой Босс"
         icon="/assets/timers/world_boss.webp"

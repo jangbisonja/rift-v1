@@ -12,10 +12,11 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 **Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
 
 **Key files**:
-- `models.py` — `User` extends `SQLAlchemyBaseUserTableUUID`; no extra columns yet
+- `models.py` — `User` extends `SQLAlchemyBaseUserTableUUID`; `PublicOAuthAccount` extends `SQLAlchemyBaseOAuthAccountTableUUID` with `user_id` FK overriding the mixin default to point to `public_user.id`
 - `service.py` — `get_user_db` generator + `UserManager` subclass for lifecycle hooks
 - `router.py` — configures `BearerTransport`, `JWTStrategy`, `AuthenticationBackend`, `FastAPIUsers`; exports `current_user`, `current_superuser`, `auth_router`, `users_router`
-- `config.py` — `AuthConfig(BaseSettings)`: `JWT_SECRET`, `JWT_ALG`, `JWT_EXP`
+- `config.py` — `AuthConfig(BaseSettings)`: `JWT_SECRET`, `JWT_ALG`, `JWT_EXP`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `FRONTEND_URL`, `APP_ENV`
+- `discord.py` — separate `FastAPIUsers` instance for public users; `CookieTransport` (`user_token`), 30-day JWT; custom OAuth2 callback with redirect; `current_public_user` dependency
 
 **Design decisions**:
 - **fastapi-users over custom auth**: battle-tested password hashing, token lifecycle, schema scaffolding — saves ~200 lines of boilerplate
@@ -110,6 +111,33 @@ Files per module: `router.py`, `schemas.py`, `models.py`, `service.py`, `depende
 - **UPDATE per row, not DELETE+INSERT**: preserves row UUIDs and avoids FK/constraint churn; atomicity is application-level (all updates in one session before `commit()`)
 - **No timezone logic in backend**: the backend stores a static boolean grid only. All MSK conversion, in-game day calculation, and countdown logic live entirely on the frontend (RULES.md #W1, #W3; TIMERS.md algorithm)
 - **`GET /timers/schedule` is public**: countdown bar is visible to all users without login (RULES.md #W4); only the PUT write endpoint requires superuser auth
+
+---
+
+---
+
+## `users`
+
+**Purpose**: Public user profiles — nickname management, admin-assigned cosmetics, and prohibited nickname enforcement for Discord-authenticated users.
+
+**Endpoints**: see [`API_CONTRACT.md`](../../API_CONTRACT.md).
+
+**Key files**:
+- `constants.py` — `NicknameScript` enum: `CYRILLIC`, `LATIN`; `UserBadge` enum: `VERIFIED`, `FOUNDER`
+- `models.py` — `PublicUser` (UUID PK, `discord_id`, `discord_username`, `nickname`, `nickname_lower`, `nickname_script`, `nickname_color`, `badge`, `nickname_changed_at`, timestamps; also includes fastapi-users protocol fields); `ProhibitedNickname` (UUID PK, `word` stored lowercase)
+- `schemas.py` — `PublicUserRead` (public API shape; omits `nickname_lower`, email, and internal fastapi-users fields); `NicknameUpdate` (strips whitespace); `NicknameErrorDetail` (structured error with `code`, `message`, `seconds_remaining`); `CosmeticsUpdate`
+- `service.py` — `validate_nickname()`: length → script → prohibited → uniqueness checks, raises 422 with `NicknameErrorDetail`; `check_cooldown()`: 10-minute cooldown on updates (not initial set); `set_nickname()`: validates and persists nickname + script + `nickname_lower`
+- `router.py` — `PATCH /users/me/nickname` (public user, cooldown-gated); `PATCH /mod/users/{id}/cosmetics` (superuser)
+- `prohibited.py` — service + router for `GET/POST/DELETE /mod/prohibited-nicknames`
+- `seeder.py` — idempotent startup seed of 14 baseline reserved words; called from `main.py` lifespan
+
+**Design decisions**:
+- **Separate `public_user` table from `user`**: admin and public user systems are completely independent; no shared tables, cookies, or fastapi-users instances (see `ARCHITECTURE.md`)
+- **`nickname_lower` as a real stored column**: enables a simple DB UNIQUE index for case-insensitive uniqueness (RULES.md #N2). Not computed — stored explicitly so the constraint is enforceable without function indexes.
+- **Custom `PublicUserManager.oauth_callback`**: overrides BaseUserManager because (a) `PublicUser` has no email/password and (b) we use `discord_id` (not email) for user lookup. The base class `oauth_callback` is not called.
+- **Synthetic `email` field on `PublicUser`**: fastapi-users' `Authenticator` requires an `email` column on the user model. We store `discord:{discord_id}@rift.internal` — it is never exposed in the API and never used for login.
+- **10-minute cooldown on nickname updates, not initial set**: `nickname_changed_at` is `NULL` for users who have never updated their nickname (initial set doesn't count). Cooldown only triggers on the second and subsequent changes.
+- **`badge` and `nickname_color` admin-assigned only**: not settable via `PATCH /users/me` — only via `PATCH /mod/users/{id}/cosmetics`. The `PublicUserUpdate` schema inherits from `BaseUserUpdate` and deliberately exposes no cosmetics fields.
 
 ---
 

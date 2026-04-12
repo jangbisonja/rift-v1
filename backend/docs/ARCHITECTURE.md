@@ -42,11 +42,14 @@ Single shared `async_sessionmaker` → per-request sessions via `get_db()` depen
 Field-level definitions → [`API_CONTRACT.md`](../../API_CONTRACT.md) § Data Shapes.
 
 ```
-user        fastapi-users managed
-post        core content entity
-tag         taxonomy label
-post_tag    M2M join (post ↔ tag)
-media       uploaded file record
+user                  fastapi-users managed (admin)
+post                  core content entity
+tag                   taxonomy label
+post_tag              M2M join (post ↔ tag)
+media                 uploaded file record
+public_user           public user profiles (Discord OAuth2)
+public_oauth_account  Discord OAuth tokens (managed by fastapi-users)
+prohibited_nickname   admin-maintained list of banned nickname words
 ```
 
 ### Relationships
@@ -61,17 +64,35 @@ All constraint names are explicit via `POSTGRES_INDEXES_NAMING_CONVENTION` on `B
 
 ## Authentication
 
-### MVP (current)
+### Two independent user systems
+
+There are two completely separate authentication systems. They must never share tables, cookies, or fastapi-users instances.
+
+| System | User table | Cookie | Transport | Expiry | fastapi-users instance |
+|---|---|---|---|---|---|
+| Admin | `user` | `token` | `BearerTransport` | 30 min | `fastapi_users` in `src/auth/router.py` |
+| Public | `public_user` + `public_oauth_account` | `user_token` | `CookieTransport` | 30 days | `public_fastapi_users` in `src/auth/discord.py` |
+
+### Admin auth (current)
 Email/password → JWT bearer token via **fastapi-users**. Admin seeded in `lifespan` on startup; idempotent (`UserAlreadyExists` skipped silently).
 
-### Planned
-Discord OAuth2 for public users. fastapi-users supports multiple `auth_backends` in a list — no structural change needed to add it.
+### Public user auth (Discord OAuth2)
+Discord OAuth2 callback → find/create `PublicUser` by `discord_id` → JWT in HTTP-only cookie `user_token`. Implemented in `src/auth/discord.py`.
+
+The standard fastapi-users `get_oauth_router()` is not used directly — a custom router handles:
+1. CSRF validation (state JWT)
+2. `account_email`-less flow (Discord `identify` scope doesn't guarantee email)
+3. Post-login redirect to frontend (instead of 204)
+
+The `PublicUser` model includes synthetic fastapi-users protocol fields (`email`, `hashed_password`, `is_active`, `is_superuser`, `is_verified`) required by the `Authenticator` for `current_user(active=True)` to work. These are never exposed in `PublicUserRead`.
 
 ### Guards
 - Public endpoints: no dependency
 - Admin-only: `dependencies=[Depends(current_superuser)]`
+- Public user routes: `Depends(current_public_user)` from `src.auth.discord`
 
-`current_superuser` defined once in `src/auth/router.py`, imported by all other routers.
+`current_superuser` defined once in `src/auth/router.py`, imported by all other admin routers.
+`current_public_user` defined in `src/auth/discord.py`, imported by `src/users/router.py`.
 
 ## File Storage
 

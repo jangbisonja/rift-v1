@@ -28,6 +28,8 @@ Send as: `Authorization: Bearer <access_token>`
 - `PostType`: `NEWS` | `ARTICLE` | `PROMO` | `EVENT`
 - `PostStatus`: `DRAFT` | `PUBLISHED` | `ARCHIVE`
 - `TimerType`: `WORLD_BOSS` | `RIFT`
+- `NicknameScript`: `CYRILLIC` | `LATIN`
+- `UserBadge`: `VERIFIED` | `FOUNDER`
 
 **Timer schedule shape (`TimerSchedule`):**
 ```json
@@ -37,6 +39,28 @@ Send as: `Authorization: Bearer <access_token>`
 }
 ```
 Array index 0 = Monday, index 6 = Sunday (ISO 8601). Both arrays always contain exactly 7 elements.
+
+**`PublicUserRead` response shape:**
+```json
+{
+  "id": "uuid",
+  "display_id": 1,
+  "discord_id": "123456789",
+  "discord_username": "username",
+  "nickname": "user00001",
+  "nickname_script": "LATIN" | "CYRILLIC" | null,
+  "nickname_color": "#FF5722" | null,
+  "badge": "VERIFIED" | "FOUNDER" | null,
+  "nickname_changed_at": "2026-04-08T12:00:00Z" | null,
+  "created_at": "2026-04-08T12:00:00Z"
+}
+```
+No `email`, `nickname_lower`, avatar, or other internal fields.
+`display_id` — sequential integer, auto-assigned. Used to derive the default nickname (`user{display_id:05d}`).
+
+**Session cookies:**
+- `token` — admin JWT (HTTP-only, `Authorization: Bearer` via BearerTransport). 30-minute expiry. Never used for public users.
+- `user_token` — public user JWT (HTTP-only, SameSite=Lax, 30-day expiry). Set by Discord OAuth2 callback. Never used for admin routes.
 
 **Two post response shapes:**
 - `PostListItem` — returned by `GET /posts`: `id, type, status, title, slug, excerpt, created_at, published_at, tags[], media[], cover_media, start_date, end_date, promo_code, external_link, redirect_to_external`. No `content`, no `post_metadata`.
@@ -77,9 +101,19 @@ The standalone `GET /media` endpoint returns a fuller shape that also includes `
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/health` | public | Health check → `{ status, db, env }` |
-| POST | `/auth/login` | public | Get JWT token |
-| GET | `/users/me` | user | Current user profile |
-| PATCH | `/users/me` | user | Update current user (provided by fastapi-users; not used by frontend admin panel) |
+| POST | `/auth/login` | public | Admin login → JWT (sets `token` cookie via BearerTransport) |
+| GET | `/users/me` | admin user | Admin: current user profile (fastapi-users) |
+| PATCH | `/users/me` | admin user | Admin: update current user (fastapi-users; not used by frontend panel) |
+| GET | `/auth/discord/authorize` | public | Redirect to Discord OAuth2 authorize URL → `{ authorization_url }` |
+| GET | `/auth/discord/callback` | public | Receive Discord code, find/create `PublicUser`, set `user_token` cookie, redirect to frontend |
+| POST | `/auth/discord/logout` | `user_token` cookie | Clear `user_token` cookie |
+| GET | `/users/me` | `user_token` cookie | Public user profile → `PublicUserRead` |
+| PATCH | `/users/me/nickname` | `user_token` cookie | Set/update nickname → `PublicUserRead` (cooldown: 10 min; auto-assigned default nickname has no cooldown) |
+| DELETE | `/users/me` | `user_token` cookie | Permanently delete account + cascade oauth_accounts + clear `user_token` cookie → 204 |
+| PATCH | `/mod/users/{id}/cosmetics` | superuser | Set `nickname_color` and/or `badge` on any user → `PublicUserRead` |
+| GET | `/mod/prohibited-nicknames` | superuser | List prohibited words |
+| POST | `/mod/prohibited-nicknames` | superuser | Add prohibited word |
+| DELETE | `/mod/prohibited-nicknames/{id}` | superuser | Remove prohibited word |
 | GET | `/posts` | public | List posts (`?post_type=`, `?post_status=`, `?slug=`, `?limit=`, `?offset=`, `?visibility=public\|all`) → `PostListItem[]` |
 | GET | `/posts/{id}` | public | Single post → `PostRead` (includes content) |
 | POST | `/posts` | superuser | Create post |

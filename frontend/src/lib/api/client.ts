@@ -12,7 +12,7 @@
  * Pagination is limit/offset, not page/size.
  */
 
-import type { Post, PostListItem, PostCreate, PostUpdate, Tag, TagCreate, Media } from "@/lib/schemas";
+import type { Post, PostListItem, PostCreate, PostUpdate, Tag, TagCreate, Media, PublicUser } from "@/lib/schemas";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -245,4 +245,59 @@ export async function updateTimerSchedule(data: TimerSchedule, token: string): P
     { method: "PUT", body: JSON.stringify(data) },
     { token },
   );
+}
+
+// ─── Public User ──────────────────────────────────────────────────────────────
+
+/**
+ * GET /users/me — returns the current public user, or null on 401 (not logged in).
+ * Never throws on 401; all other errors propagate normally.
+ */
+export async function getMe(): Promise<PublicUser | null> {
+  try {
+    return await request<PublicUser>("/users/me", { credentials: "include" });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return null;
+    throw err;
+  }
+}
+
+/**
+ * PATCH /users/me/nickname — set or update the current user's nickname.
+ * Throws ApiError on validation/cooldown errors; caller handles error codes.
+ */
+export async function updateNickname(nickname: string): Promise<PublicUser> {
+  return request<PublicUser>(
+    "/users/me/nickname",
+    { method: "PATCH", body: JSON.stringify({ nickname }), credentials: "include" },
+  );
+}
+
+/**
+ * DELETE /users/me — permanently deletes the current user account.
+ * The backend cascades oauth_accounts and clears the user_token cookie.
+ */
+export async function deleteMe(): Promise<void> {
+  await request<void>("/users/me", { method: "DELETE", credentials: "include" });
+}
+
+/**
+ * POST /api/auth/discord/logout — clears user_token via Next.js route handler.
+ * Never throws — best-effort, caller continues regardless.
+ */
+export async function logoutPublicUser(): Promise<void> {
+  try {
+    await fetch("/api/auth/discord/logout", { method: "POST" });
+  } catch {
+    // ignore — cookie will expire naturally
+  }
+}
+
+/**
+ * Returns the Discord OAuth2 authorize URL.
+ * Navigating here starts the login flow (backend redirects to Discord).
+ */
+export function discordAuthorizeUrl(): string {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  return `${base}/auth/discord/authorize`;
 }

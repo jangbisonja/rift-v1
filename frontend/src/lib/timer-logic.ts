@@ -75,8 +75,10 @@ export function computeSecondsUntil(schedule: boolean[]): number | null {
     const dow = inGameDow(nextSlot);
 
     if (schedule[dow]) {
-      // Active slot found — compute countdown in seconds
-      const diff = Math.floor((nextSlot.getTime() - Date.now()) / 1000);
+      // Active slot found — compute countdown in seconds.
+      // Both nextSlot and mskNow are in the same fake-UTC (MSK+0) domain,
+      // so their difference is the correct real-time duration with no offset error.
+      const diff = Math.floor((nextSlot.getTime() - mskNow.getTime()) / 1000);
       return diff > 0 ? diff : 0;
     } else {
       // Skip to next window

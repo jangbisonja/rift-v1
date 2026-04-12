@@ -5,9 +5,7 @@
 Senior TypeScript/Next.js developer. Write production-quality, type-safe code.
 Follow conventions exactly — do not invent patterns.
 
-**Before writing code, read:**
-- `../API_CONTRACT.md` — shared API contract (data shapes, endpoints, auth flow)
-- `../RULES.md` — business invariants (timezone, post type rules, media, auth, pagination)
+**Before writing code:** Check `docs/MAP.md` to identify which docs apply to your task. Open only those — do not read all docs by default.
 
 ## Stack
 
@@ -27,6 +25,7 @@ frontend/
 │   ├── app/
 │   │   ├── (public)/                    # public-facing pages (SSR via Server Components)
 │   │   │   ├── page.tsx                 # homepage — News+Promos | Events | Articles
+│   │   │   ├── profile/page.tsx         # user profile page (client component, auth-redirects to /)
 │   │   │   ├── news/page.tsx + [slug]/  # news listing + detail
 │   │   │   ├── articles/page.tsx + [slug]/
 │   │   │   ├── events/page.tsx + [slug]/
@@ -51,7 +50,9 @@ frontend/
 │   │   ├── promo-item.tsx               # compact promo card for right-column list
 │   │   ├── rich-text-content.tsx        # server-side TipTap JSON → HTML (custom DOM-free recursive renderer — generateHTML requires DOM)
 │   │   ├── theme-toggle.tsx             # Sun/Moon button ("use client")
-│   │   ├── providers.tsx               # next-themes ThemeProvider ("use client")
+│   │   ├── nickname-form.tsx            # shared nickname change form (used by profile page)
+│   │   ├── welcome-toast.tsx            # first-login toast island (renders on /?welcome=1)
+│   │   ├── providers.tsx               # next-themes ThemeProvider + UserProvider + ToastProvider ("use client")
 │   │   └── mod/
 │   │       ├── sidebar.tsx             # admin nav sidebar
 │   │       ├── post-form.tsx           # shared create/edit form (title, type, tags, cover, content, metadata)
@@ -457,6 +458,23 @@ The parent (`nav.tsx`) remains a Server Component. This is the correct pattern f
 When two components need the same computation (e.g., MSK time arithmetic, countdown formatting) but one receives data as props (server-fed) and the other self-fetches (client nav island), do NOT duplicate the logic or import from a UI component.
 Extract pure TypeScript functions to `src/lib/<domain>-logic.ts` with no React imports. Both components import from there.
 Applied: `src/lib/timer-logic.ts` is imported by both `src/components/timer-bar.tsx` and `src/components/nav-timer-bar.tsx`. If adding future timer-adjacent logic, add it to `timer-logic.ts` — not inline in a component.
+
+**Profile page — pure client component with `useUser()` redirect**
+`/profile` is a client component (no server wrapper). Auth protection is soft: if
+`!isLoading && user === null`, `router.push("/")` fires in `useEffect`. This is
+appropriate because the page only shows the user's own data from the auth-gated
+`GET /users/me` API — an unauthenticated visitor never receives sensitive data.
+
+**NicknameForm extracted to `src/components/nickname-form.tsx`**
+The nickname change form is shared between the profile page and any future
+authenticated UI. Extracted from `user-modal.tsx` to avoid duplication.
+Uses the shared `NicknameSchema` from `src/lib/schemas/index.ts`.
+
+**WelcomeToast — server searchParams + client island pattern**
+The backend redirects new users to `/?welcome=1`. The homepage (server component)
+reads `await props.searchParams`, and if `welcome === "1"`, renders `<WelcomeToast />`
+(a client island that fires the toast once on mount and then strips `?welcome=1`
+from the URL via `router.replace()` with `scroll: false`).
 
 ## Module Addition & UI Extension Protocol
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { User } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { NavTimerBar } from "@/components/nav-timer-bar";
+import { UserButton } from "@/components/user-button";
 
 const LINKS = [
   { href: "/news", label: "Новости" },
@@ -30,21 +29,10 @@ export function Nav() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <NavTimerBar />
-          {/* Separator */}
-          <div aria-hidden="true" className="w-px h-5 bg-border mx-[15px] shrink-0" />
-          {/* User block — placeholder until auth modal is wired */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Профиль"
-              className="flex items-center justify-center size-8 rounded-md text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
-            >
-              <User className="size-4" />
-            </button>
-            <ThemeToggle />
-          </div>
+        <div className="flex items-center gap-2">
+          <UserButton />
+          <div aria-hidden="true" className="w-px h-5 bg-border shrink-0" />
+          <ThemeToggle />
         </div>
       </div>
     </header>

@@ -31,12 +31,15 @@ Act as senior frontend developer. See `frontend/CLAUDE.md` for full instructions
 
 | Document | Purpose |
 |---|---|
+| `docs/MAP.md` | Fast-lookup index of all docs with "read when" triggers. Start here. |
 | `API_CONTRACT.md` | Single source of truth for data shapes, endpoints, and auth flow. Both layers reference this — never restate its contents in domain files. |
 | `DEPLOY.md` | Operational runbook — infrastructure, routing, deploy commands, pm2. |
 | `.claude/rules/collaboration.md` | Communication style (applies to all agents). |
 | `.claude/rules/self-documentation.md` | When and how to record non-obvious decisions (applies to all agents). |
 | `RULES.md` | Business invariants — timezone, post types, media, auth, pagination. Both layers must comply. |
 | `docs/ROADMAP.md` | Post-MVP feature goals and phase tracking. Links to module specs in `docs/`. |
+
+**Subagent dispatch:** When dispatching a subagent, provide all task-relevant context inline in the prompt (file paths, schema shapes, relevant rule numbers, prior decisions). Do not instruct subagents to read global documentation unless the task genuinely requires it — redundant reads are the primary source of token waste.
 
 ## Documentation Boundaries
 

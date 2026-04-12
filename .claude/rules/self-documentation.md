@@ -15,7 +15,11 @@ What to record:
 
 ## Pre-Implementation Check
 
-Before writing code that touches business logic, read `RULES.md` at the project root.
+Before writing code that touches business logic, check `docs/MAP.md` → use the
+RULES.md category index to open only the sections relevant to your task (e.g.,
+N1–N2 for nicknames, T1–T4 for timezone, P1–P6 for posts). Do not read all of
+RULES.md — jump to the applicable category.
+
 If your implementation would violate any numbered rule, stop and raise the conflict
 with the user. Do not silently work around a rule.
 
@@ -29,7 +33,7 @@ This is a hard gate — not a suggestion. If a user ask implies Phase 3–5 impl
 
 Approved specs:
 - `docs/TIMERS.md` — Activity Timers (Phase 2) ✓
-- `docs/AUTH.md` — Discord Auth (Phase 2) — in progress, not yet approved
+- `docs/AUTH.md` — Discord Auth (Phase 2) ✓
 - `docs/CHARACTERS.md` — Character Engine & Ownership (Phase 3) — draft, not yet approved
 
 ## Module Spec Format

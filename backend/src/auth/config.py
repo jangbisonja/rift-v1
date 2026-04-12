@@ -8,7 +8,15 @@ class AuthConfig(BaseSettings):
 
     JWT_SECRET: str = "change-me"
     JWT_ALG: str = "HS256"
-    JWT_EXP: int = 30  # minutes
+    JWT_EXP: int = 30  # minutes (admin)
+
+    DISCORD_CLIENT_ID: str = ""
+    DISCORD_CLIENT_SECRET: str = ""
+    DISCORD_REDIRECT_URI: str = "http://localhost:8000/auth/discord/callback"
+
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    APP_ENV: str = "local"
 
 
 auth_settings = AuthConfig()

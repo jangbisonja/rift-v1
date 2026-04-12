@@ -1,8 +1,21 @@
 # Business Rules — Rift
 
 These are system invariants. Every rule below MUST be satisfied by any new code.
-Before implementing a feature, scan this file for applicable rules. If your code
-would violate any rule, stop and raise the conflict.
+Before implementing a feature, check the category index below to find applicable rules.
+If your code would violate any rule, stop and raise the conflict.
+
+## Category Index
+
+| Category | Rules | Topic |
+|----------|-------|-------|
+| Timezone & Locale | T1–T4 | UTC storage, MSK display, Russian locale, ISO-8601 |
+| Post Types & Fields | P1–P6 | PostType enum, required fields, slugs, type immutability |
+| Post Lifecycle | L1–L3 | Status enum, published_at immutability, expiry grace |
+| Activity Windows | W1–W3 | In-game day boundary at 06:00 MSK, hourly event slots |
+| Nicknames | N1–N2 | Cyrillic/Latin+digits, 3-24 chars, cooldown |
+| Media | M1–M3 | WebP conversion, UUID filenames, upload paths |
+| Auth | A1–A2 | Cookie names, JWT lifetimes |
+| Pagination | Q1 | Default page size |
 
 ## How to use this file
 
@@ -69,7 +82,7 @@ would violate any rule, stop and raise the conflict.
 
 ## Nicknames & Profiles
 
-- **N1** — Nicknames must be strictly Cyrillic (RU) or strictly Latin (EN). No mixed scripts within a single nickname. No numbers, no symbols. _Layer: both (backend validation + frontend input masking)._
+- **N1** — Nicknames must be strictly Cyrillic (RU)+digits or strictly Latin (EN)+digits. No mixing of alphabets within a single nickname. Must contain at least one letter. No spaces or other symbols. Allowed: `User123`, `Юзер5`. Rejected: `UserЮзер`, `123`, `User!`. _Layer: both (backend validation + frontend input masking)._
 - **N2** — Nickname uniqueness is case-insensitive. Storage and display preserve the user's original casing. _Layer: backend (DB constraint + service-layer check)._
 
 ## Activity Timers (World Events)
@@ -77,4 +90,4 @@ would violate any rule, stop and raise the conflict.
 - **W1** — "In-game Day" resets at 06:00 Moscow Time (03:00 UTC). Times before 06:00 MSK belong to the previous calendar day. _Layer: both._
 - **W2** — Activity schedule is a strict 7-day cycle. Each day is independently toggled active/inactive by admin. _Layer: backend (schedule storage + API)._
 - **W3** — Events fire every hour on the hour (XX:00 MSK) if the current in-game day is active. _Layer: both._
-- **W4** — Timer UI is a 30 px-tall header bar displayed strictly on the Homepage, horizontally aligned with the Theme Toggle. Not rendered on any other page. _Layer: frontend._
+- **W4** — Timer UI is an independent 30 px-tall strip rendered above the main navigation bar in the root layout. Visible on all public pages. _Layer: frontend._

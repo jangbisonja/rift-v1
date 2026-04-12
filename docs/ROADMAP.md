@@ -72,8 +72,8 @@ _This phase is under active discussion. Full module specifications (module docs 
 _This phase is under active discussion. Full module specifications (module docs in `docs/`) are pending and must be written and approved before implementation begins._
 
 **Premium Identity**
-- Color-coded nicknames for verified/premium users
-- Status badges
+- Color-coded nicknames and status badges (currently admin-assigned manually; automatic
+  subscription/payment-based assignment is deferred — see Technical Debt below)
 
 **Global Statistics**
 - Aggregate data from parsed character records (e.g., class popularity rankings)
@@ -88,3 +88,4 @@ Known debt is tracked at the layer that owns it; this section is an index only.
 
 - **Backend** — [`backend/docs/ARCHITECTURE.md § Future Scaling & Technical Debt`](../backend/docs/ARCHITECTURE.md): 5 items (Excerpt Generation, Media Orphan Accumulation, Upload Memory Safety, Detail Page Double Fetch, Inline Media Reference Tracking).
 - **Frontend** — [`frontend/TODO.md § Technical Debt`](../frontend/TODO.md): 2 items (Field-level error surfacing in admin forms, listPosts query param DRY).
+- **Auth** — Automatic cosmetics assignment (subscription/payment system for color-coded nicknames and badges). Currently manual/admin-only. Deferred until a payment provider is selected and a business model is defined.

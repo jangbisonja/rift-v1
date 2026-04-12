@@ -16,7 +16,7 @@ Display real-time countdowns for two recurring world events (World Boss and Rift
 ## Outputs
 
 - **`GET /timers/schedule`** (public): the 14-toggle grid as two 7-element boolean arrays (see `API_CONTRACT.md`).
-- **Timer bar** (frontend, homepage only): two side-by-side countdowns, each showing either `HH:MM:SS` or "Сегодня нет".
+- **Timer strip** (frontend, all public pages): two side-by-side countdowns in a 30 px strip above the main nav bar, each showing either `HH:MM:SS` or "Сегодня нет".
 
 ---
 
@@ -101,7 +101,7 @@ Seeded on startup via lifespan (idempotent): 14 rows inserted if absent. All def
 - Seed all 14 rows on startup; never leave gaps in the schedule
 - Return arrays in ISO weekday order: index 0 = Monday, index 6 = Sunday
 - `PUT /timers/schedule` always replaces the full 14-toggle grid atomically — no partial updates
-- Timer bar renders on the Homepage only (RULES.md #W4)
+- Timer strip renders above the main nav bar in the root layout, visible on all public pages (RULES.md #W4)
 - All UI text in Russian (RULES.md #T3): "Сегодня нет"
 
 **MUST NOT:**
@@ -124,8 +124,9 @@ Seeded on startup via lifespan (idempotent): 14 rows inserted if absent. All def
 | Backend seeder | `backend/src/timers/seeder.py` (called from `main.py` lifespan) |
 | Backend migration | `backend/alembic/versions/YYYY-MM-DD_timer-schedule.py` |
 | Frontend schedule fetch | `frontend/src/lib/timers.ts` |
-| Frontend countdown logic | `frontend/src/components/timer-bar.tsx` (client component) |
-| Frontend homepage | `frontend/src/app/page.tsx` |
+| Frontend countdown logic | `frontend/src/components/timer-bar.tsx` (client component — receives schedule as prop, no fetch) |
+| Frontend strip wrapper | `frontend/src/components/timer-strip.tsx` (server component — fetches schedule, renders `TimerBar`) |
+| Root layout | `frontend/src/app/layout.tsx` (renders `TimerStrip` above `Nav`) |
 | Admin schedule page | `frontend/src/app/mod/timers/page.tsx` |
 | Timer icons | `frontend/public/assets/timers/world_boss.webp`, `rift.webp` |
 | API contract | `API_CONTRACT.md` |

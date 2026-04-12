@@ -151,3 +151,46 @@ export const LoginFormSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 export type LoginForm = z.infer<typeof LoginFormSchema>;
+
+// ─── Public User ──────────────────────────────────────────────────────────────
+
+export const UserBadgeSchema = z.enum(["VERIFIED", "FOUNDER"]);
+export type UserBadge = z.infer<typeof UserBadgeSchema>;
+
+export const NicknameScriptSchema = z.enum(["CYRILLIC", "LATIN"]);
+export type NicknameScript = z.infer<typeof NicknameScriptSchema>;
+
+export const PublicUserSchema = z.object({
+  id: z.string(),
+  display_id: z.number(),
+  discord_id: z.string(),
+  discord_username: z.string(),
+  nickname: z.string().nullable(),
+  nickname_script: NicknameScriptSchema.nullable(),
+  nickname_color: z.string().nullable(),
+  badge: UserBadgeSchema.nullable(),
+  nickname_changed_at: z.string().nullable(),
+  created_at: z.string(),
+});
+export type PublicUser = z.infer<typeof PublicUserSchema>;
+
+// ─── Nickname form ─────────────────────────────────────────────────────────────
+
+export const NicknameSchema = z.object({
+  nickname: z
+    .string()
+    .min(3, "От 3 до 24 символов")
+    .max(24, "От 3 до 24 символов")
+    .refine(
+      (val) => {
+        const hasCyr = /[а-яёА-ЯЁ]/i.test(val);
+        const hasLat = /[a-zA-Z]/.test(val);
+        if (hasCyr && hasLat) return false; // mixed alphabets
+        if (hasCyr) return /^[а-яёА-ЯЁ0-9]+$/i.test(val);
+        if (hasLat) return /^[a-zA-Z0-9]+$/.test(val);
+        return false; // all digits or symbols — no letter
+      },
+      "Только кириллица или только латиница (цифры разрешены)",
+    ),
+});
+export type NicknameFormValues = z.infer<typeof NicknameSchema>;

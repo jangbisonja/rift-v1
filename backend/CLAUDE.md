@@ -5,12 +5,7 @@
 Senior Python/FastAPI developer. Write production-quality, async-first code.
 Follow conventions exactly — do not invent patterns.
 
-**Before writing code, read:**
-- `../API_CONTRACT.md` — shared API contract (data shapes, endpoints, auth flow)
-- `backend/docs/ARCHITECTURE.md` — system design, layers, DB schema, auth model
-- `backend/docs/MODULES.md` — per-module purpose, endpoints, design decisions
-- `backend/docs/fastapi/AGENTS.md` — FastAPI patterns and examples
-- `../RULES.md` — business invariants (timezone, post type rules, media, auth, pagination)
+**Before writing code:** Check `docs/MAP.md` to identify which docs apply to your task. Open only those — do not read all docs by default. Exception: always read the **Known Solutions** section of this file; it's compact and prevents repeated mistakes.
 
 ## Stack
 
@@ -24,11 +19,12 @@ Follow conventions exactly — do not invent patterns.
 ```
 backend/
 ├── src/
-│   ├── auth/         # fastapi-users, JWT, admin seed
+│   ├── auth/         # fastapi-users, JWT, admin seed + Discord OAuth2 setup
 │   ├── posts/        # Post CRUD + M2M tags
 │   ├── media/        # File upload, WebP conversion
 │   ├── tags/         # Tag management
 │   ├── timers/       # Activity timer schedule (14-toggle grid)
+│   ├── users/        # Public user profiles, nicknames, cosmetics, prohibited words
 │   ├── config.py     # Global BaseSettings
 │   ├── models.py     # DeclarativeBase + naming convention
 │   ├── database.py   # Async engine + session
@@ -116,6 +112,52 @@ Pydantic v2 silently accepts naive datetime strings (no `+00:00` suffix) for
 `PostUpdate` both declare a `@field_validator("start_date", "end_date",
 mode="after")` that raises `ValueError` if `tzinfo is None`. The frontend
 must always send ISO-8601 strings with a UTC offset (e.g. `2024-01-01T00:00:00Z`).
+
+**PostgreSQL `CREATE TYPE` has no `IF NOT EXISTS`**
+Unlike `CREATE TABLE` / `CREATE INDEX`, PostgreSQL does not support `CREATE TYPE IF NOT EXISTS` for enum types (it's a syntax error on all versions including PG 16). The idempotent pattern for enum creation in Alembic migrations is a `DO` block:
+```sql
+DO $$ BEGIN
+    CREATE TYPE myenum AS ENUM ('A', 'B');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+```
+Additionally, column definitions inside `op.create_table()` must use `postgresql.ENUM(..., create_type=False)` (not `sa.Enum`) to prevent SQLAlchemy from firing a second implicit `CREATE TYPE` via its `_on_table_create` event.
+
+**Two fastapi-users instances — never share**
+Admin (`User` table, `BearerTransport`, cookie `token`, 30-min JWT) and public
+(`PublicUser` table, `CookieTransport`, cookie `user_token`, 30-day JWT) are
+completely independent fastapi-users setups. Admin instance: `src/auth/router.py`.
+Public instance: `src/auth/discord.py`. Cookie names must never collide.
+
+**Synthetic email for `PublicUser`**
+fastapi-users' `Authenticator` calls `is_active` and other protocol fields via
+the user model. `PublicUser` does not extend `SQLAlchemyBaseUserTableUUID` but
+must implement the same interface. Solution: add `email`, `hashed_password`,
+`is_active`, `is_superuser`, `is_verified` columns to `public_user` table.
+The `email` value is synthetic: `discord:{discord_id}@rift.internal`. Never
+expose it in `PublicUserRead`.
+
+**Custom `oauth_callback` in `PublicUserManager`**
+The standard `BaseUserManager.oauth_callback` creates users by `email` field and
+tries `get_by_email`. Our `PublicUser` uses `discord_id` as the primary key for
+lookup. Solution: completely override `oauth_callback` in `PublicUserManager`
+to look up by `discord_id`, create with synthetic email, and update `discord_username`
+on every login. Never call `super().oauth_callback()`.
+
+**Custom Discord OAuth router (not `get_oauth_router`)**
+fastapi-users `get_oauth_router` raises 400 if `account_email is None`. Discord
+`identify` scope does not guarantee an email. Also, the stock callback returns
+204 (CookieTransport) but we need a redirect to the frontend. Solution: custom
+`/authorize` + `/callback` endpoints in `src/auth/discord.py` that call
+`discord_client.get_id_email`, run our `oauth_callback`, then return a
+`RedirectResponse` with the cookie set via `public_cookie_transport._set_login_cookie()`.
+
+**`display_id` auto-nickname pattern — flush before nickname assignment**
+`PublicUser.display_id` is `GENERATED ALWAYS AS IDENTITY`. SQLAlchemy populates it
+after `session.flush()` via PostgreSQL's `RETURNING` clause. The auto-nickname
+(`f"user{new_user.display_id:05d}"`) is assigned directly on the ORM object between
+`flush()` and `commit()` in `oauth_callback()` — no extra DB round-trip needed.
+`nickname_changed_at` is left NULL so the user can rename immediately without cooldown.
 
 ## Docs Maintenance
 

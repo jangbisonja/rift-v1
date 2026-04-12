@@ -3,6 +3,7 @@ import { Nunito_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Nav } from "@/components/nav";
+import { TimerStrip } from "@/components/timer-strip";
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${nunitoSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
         <Providers>
+          <TimerStrip />
           <Nav />
           <main className="flex-1">{children}</main>
         </Providers>

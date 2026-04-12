@@ -6,6 +6,7 @@ psycopg2-binary
 alembic
 pydantic-settings
 fastapi-users[sqlalchemy]
+httpx-oauth
 pillow
 python-multipart
 python-slugify
